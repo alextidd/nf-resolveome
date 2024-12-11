@@ -1,0 +1,134 @@
+---
+title: "ResolveOME PTA analysis"
+author: "Alexandra Tidd"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    fig_width: 8
+    keep_md: false
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 4
+    theme: lumen
+params:
+  donor_id: null
+  ids: null
+  geno: null
+  summary_txt: null
+  global_txt: null
+  regions_txt: null
+---
+
+```{r setup, include = F, message = F, warning = F, echo = F}
+# chunk options
+knitr::opts_chunk$set(warning = FALSE,
+                      dpi = 300,
+                      message = FALSE)
+
+# libraries
+library(magrittr)
+library(ggplot2)
+```
+
+### Load data
+
+```{r load_data}
+dat <-
+  list("geno" = list(file = params$geno, col_names = TRUE),
+       "summary_txt" = list(file = params$summary_txt, col_names = TRUE), 
+       "global_txt" = list(file = params$global_txt, col_names = c("chr", "cov", "prop")),
+       "regions_txt" = list(file = params$regions_txt, col_names = c("chr", "cov", "prop"))) %>%
+  purrr::map(function(dat_i) {
+    dat_i$file %>%
+      purrr::map(readr::read_tsv, col_names = dat_i$col_names) %>%
+      setNames(params$ids) %>%
+      dplyr::bind_rows(.id = "id") %>%
+      dplyr::rename_with(~ dplyr::if_else(. == "chrom", "chr", .), everything()) %>%
+      dplyr::filter(!grepl("^GL", chr), !grepl("Un", chr),
+                    !grepl("random|HLA", chr), !grepl("alt$", chr))
+  })
+
+# create a source col if none present
+if (!"source" %in% colnames(dat$geno)) {
+  dat$geno <- dat$geno %>% dplyr::mutate(source = "mutations")
+}
+```
+
+### Coverage
+
+```{r cov_mean}
+dat$summary_txt %>%
+  dplyr::filter(chr %in% c("total", "total_region")) %>%
+  dplyr::mutate(lvl = ifelse(grepl("region$", chr), "region", "global"),
+                chr = gsub("_.*", "", chr)) %>%
+  ggplot(aes(x = reorder(id, -mean), y = mean, fill = lvl)) +
+  geom_col(position = "dodge") +
+  theme_minimal() +
+  labs(title = "Mean coverage",
+       x = "Plex",
+       y = "Mean coverage") +
+  theme(axis.text.x = element_text(angle = -90, hjust = 0))
+```
+
+```{r cov_dist}
+dat[c("global_txt", "regions_txt")] %>%
+  dplyr::bind_rows(.id = "lvl") %>%
+  dplyr::filter(chr == "total", prop >= 0.01) %>%
+  ggplot(aes(x = cov, y = prop, color = id, group = id)) +
+  geom_line() +
+  labs(title = paste("Coverage distribution"),
+       x = "Coverage",
+       y = "Proportion of bases at coverage") +
+  theme_minimal() +
+  facet_grid(~ lvl) +
+  theme(legend.position = "none")
+```
+
+### VAF distribution
+
+```{r vaf_dist, fig.height = 7 * dplyr::n_distinct(dat$geno$source)}
+# function: plot vaf distribution
+plot_vaf_dist <- function(p_dat) {
+  mut_depth_bins <- c("0", "1", ">1", ">5", ">10", ">50")
+  p_dat2 <-
+    p_dat %>%
+    dplyr::mutate(mut_vaf = mut_depth / total_depth,
+                  mut_depth_bin = dplyr::case_when(mut_depth > 50 ~ ">50",
+                                                    mut_depth > 10 ~ ">10",
+                                                    mut_depth > 5 ~ ">5",
+                                                    mut_depth > 1 ~ ">1",
+                                                    mut_depth == 1 ~ "1",
+                                                    mut_depth == 0 ~ "0") %>%
+                    factor(levels = mut_depth_bins))
+  p_dat2 %>%
+    ggplot(aes(x = mut_vaf, fill = mut_depth_bin, colour = mut_depth_bin)) +
+    geom_histogram(bins = 100) +
+    geom_vline(xintercept = median(p_dat2$mut_vaf, na.rm = TRUE),
+               linetype = "dashed") +
+    theme_minimal() +
+    viridis::scale_fill_viridis(discrete = TRUE) +
+    viridis::scale_color_viridis(discrete = TRUE) +
+    facet_grid(source ~ .)
+}
+
+# plot VAF distribution
+dat$geno %>%
+  plot_vaf_dist() +
+  ggtitle("Distribution of VAFs")
+
+# plot non-zero VAF distribution
+dat$geno %>%
+  dplyr::filter(mut_depth > 0) %>%
+  plot_vaf_dist() +
+  ggtitle("Distribution of non-zero VAFs")
+
+# plot VAF distribution with increasing mut depth
+seq(1,10) %>%
+  purrr::map(function(min_mut_depth) {
+    dat$geno %>%
+      dplyr::filter(mut_depth >= min_mut_depth) %>%
+      plot_vaf_dist() +
+      ggtitle(paste("Distribution of VAFs, min", min_mut_depth, "mut depth"))
+  })
+```
