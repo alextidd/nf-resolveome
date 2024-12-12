@@ -10,9 +10,9 @@ option_list <- list(
   make_option("--chr", type = "character"),
   make_option("--mutations", type = "character"),
   make_option("--bam", type = "character"),
-  make_option("--q", type = "numeric"),
+  make_option("--min_bq", type = "numeric"),
   make_option("--mask", type = "numeric"),
-  make_option("--mq", type = "numeric"))
+  make_option("--min_mq", type = "numeric"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -44,8 +44,8 @@ geno <-
     paste(chr, pos, ref, mut, type, "\n") %>% cat()
 
       # query bam
-      calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, q = opts$q,
-                              mask = opts$mask, mq = opts$mq)
+      calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, min_bq = opts$min_bq,
+                              mask = opts$mask, min_mq = opts$min_mq)
 
       # count all reads at site
       total_depth <- sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t",

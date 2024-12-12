@@ -138,9 +138,9 @@ process genotype_mutations {
     --chr ${chr} \\
     --mutations ${mutations} \\
     --bam ${bam} \\
-    --q ${params.q} \\
+    --min_bq ${params.min_bq} \\
     --mask ${params.mask} \\
-    --mq ${params.mq}
+    --min_mq ${params.min_mq}
   mv genotyped_mutations.tsv ${meta.id}_${chr}_genotyped_mutations.tsv
   """
 }

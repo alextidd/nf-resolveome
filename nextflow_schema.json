@@ -27,11 +27,11 @@
     "genes": {
       "type": "string"
     },
-    "q": {
+    "min_bq": {
       "type": "integer",
       "default": 30
     },
-    "mq": {
+    "min_mq": {
       "type": "integer",
       "default": 30
     },
@@ -50,6 +50,15 @@
     "publish_dir_mode": {
       "type": "string",
       "default": "copy"
+    },
+    "max_memory": {
+      "type": "string"
+    },
+    "max_cpus": {
+      "type": "string"
+    },
+    "max_time": {
+      "type": "string"
     }
   },
   "required": ["samplesheet", "fasta", "bait_set", "genes"]
