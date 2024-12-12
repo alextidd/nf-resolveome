@@ -18,6 +18,8 @@ params:
   summary_txt: null
   global_txt: null
   regions_txt: null
+  genes: null
+  gene_covs: null
 ---
 
 ```{r setup, include = F, message = F, warning = F, echo = F}
@@ -51,8 +53,9 @@ dat <-
 
 # create a source col if none present
 if (!"source" %in% colnames(dat$geno)) {
-  dat$geno <- dat$geno %>% dplyr::mutate(source = "mutations")
+  dat$geno$source <- "mutations"
 }
+n_sources <- dplyr::n_distinct(dat$geno$source)
 ```
 
 ### Coverage
@@ -87,7 +90,7 @@ dat[c("global_txt", "regions_txt")] %>%
 
 ### VAF distribution
 
-```{r vaf_dist, fig.height = 7 * dplyr::n_distinct(dat$geno$source)}
+```{r vaf_dist, fig.height = (7 * n_sources)}
 # function: plot vaf distribution
 plot_vaf_dist <- function(p_dat) {
   mut_depth_bins <- c("0", "1", ">1", ">5", ">10", ">50")
@@ -123,6 +126,15 @@ dat$geno %>%
   plot_vaf_dist() +
   ggtitle("Distribution of non-zero VAFs")
 
+# plot VAF distribution per id
+dat$geno %>%
+  ggplot(aes(x = mut_vaf, colour = id)) +
+  geom_density() +
+  ggtitle("Distribution of VAFs per cell") +
+  facet_grid(source ~ .) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
 # plot VAF distribution with increasing mut depth
 seq(1,10) %>%
   purrr::map(function(min_mut_depth) {
@@ -131,4 +143,84 @@ seq(1,10) %>%
       plot_vaf_dist() +
       ggtitle(paste("Distribution of VAFs, min", min_mut_depth, "mut depth"))
   })
+```
+
+### VAF heatmap
+
+```{r vaf_heatmap, fig.width = 20, fig.height = 20}
+# function: plot VAF heatmap
+plot_vaf_heatmap <- function(p_dat, p_title = "Mutational VAF Heatmap") {
+  
+  p_dat2 <-
+    p_dat %>%
+    dplyr::mutate(mut_id = paste(chr, pos, ref, mut, sep = "_")) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(mut_id) %>%
+    dplyr::mutate(n_cells_w_mut = dplyr::n_distinct(id)) %>%
+    dplyr::ungroup() 
+  heatmap_data <-
+    p_dat2 %>%
+    reshape2::dcast(mut_id + n_cells_w_mut ~ id, value.var = "mut_vaf")
+  rownames(heatmap_data) <- heatmap_data$mut_id
+  heatmap_matrix <- as.matrix(heatmap_data[ , -c(1:3)]) # Drop annotations
+
+  # Calculate the number of mutations per column (id)
+  n_muts <-
+    p_dat2 %>%
+    dplyr::group_by(id) %>%
+    dplyr::summarise(n_muts = dplyr::n_distinct(mut_id))
+  annotation_col <- data.frame(n_muts = n_muts$n_muts)
+  rownames(annotation_col) <- n_muts$id
+
+  # Replace NAs with 0 or another value depending on your context
+  heatmap_matrix[is.na(heatmap_matrix)] <- 0
+
+  # Prepare annotations for columns
+  annotation_row <- data.frame(n_cells_w_mut = heatmap_data$n_cells_w_mut)
+  rownames(annotation_row) <- heatmap_data$mut_id
+
+  pheatmap::pheatmap(
+    mat = heatmap_matrix,
+    cluster_rows = TRUE,        # Perform hierarchical clustering on rows
+    cluster_cols = TRUE,        # Perform hierarchical clustering on columns
+    annotation_row = annotation_row, # Add row annotations
+    annotation_col = annotation_col, # Add column annotations
+    color = colorRampPalette(c("white", "blue"))(50), # Customize the color gradient
+    main = p_title
+  )
+}
+
+# plot
+dat$geno %>%
+  dplyr::filter(mut_depth > 5, mut_vaf > 0.1) %>%
+  plot_vaf_heatmap("Mutational VAF Heatmap")
+dat$geno %>%
+  dplyr::filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
+  plot_vaf_heatmap("Mutational VAF Heatmap (dndscv-annotated muts only)")
+```
+
+### Gene coverage
+
+```{r gene_cov, fig.height = 20}
+gene_covs <-
+  params$gene_covs %>%
+  purrr::map(function(file) {
+    p_dat <-
+      file %>%
+      readr::read_tsv(col_types = list("chr" = readr::col_character())) %>%
+      dplyr::mutate(start2 = start, end2 = end) %>%
+      dplyr::group_by(chr, gene, cov, id, start, end) %>%
+      dplyr::reframe(pos = start2:end2)
+  }) %>%
+  dplyr::bind_rows() %>%
+  {split(., .$gene)}
+
+purrr::map2(names(gene_covs), gene_covs, function(p_gene, p_dat) {
+  p_dat %>%
+    ggplot(aes(x = pos, y = cov)) +
+    geom_area() +
+    facet_grid(id ~ .) +
+    ggtitle(paste(p_gene, "coverage")) +
+    theme_minimal()
+})
 ```

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com//master/nextflow_schema.json",
+  "title": " pipeline parameters",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "location": {
+      "type": "string",
+      "default": "irods",
+      "enum": ["irods", "local"]
+    },
+    "samplesheet": {
+      "type": "string"
+    },
+    "fasta": {
+      "type": "string"
+    },
+    "genome_build": {
+      "type": "string",
+      "default": "GRCh37",
+      "enum": ["GRCh37", "GRCh38"]
+    },
+    "bait_set": {
+      "type": "string"
+    },
+    "genes": {
+      "type": "string"
+    },
+    "q": {
+      "type": "integer",
+      "default": 30
+    },
+    "mq": {
+      "type": "integer",
+      "default": 30
+    },
+    "mask": {
+      "type": "integer",
+      "default": 3844
+    },
+    "out_dir": {
+      "type": "string",
+      "default": "out/"
+    },
+    "no_chr": {
+      "type": "boolean",
+      "default": true
+    },
+    "publish_dir_mode": {
+      "type": "string",
+      "default": "copy"
+    }
+  },
+  "required": ["samplesheet", "fasta", "bait_set", "genes"]
+}

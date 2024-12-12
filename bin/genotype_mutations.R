@@ -32,7 +32,7 @@ muts <-
 if ("complex" %in% muts$type) {
   message("Complex mutations are not supported!")
   message(paste(muts %>% dplyr::filter(type == "complex") %>% nrow(),
-                "complex mutation(s) found and will be removed."))
+                "complex mutation(s) were found and will be removed."))
   muts <- muts %>% dplyr::filter(type != "complex")
 } 
 
@@ -69,12 +69,13 @@ geno <-
       }
       
       tibble::tibble(chr = chr, pos = pos, ref = ref, mut = mut,
-                    total_depth = total_depth, ref_depth = ref_depth,
-                    mut_depth = mut_depth) %>%
+                     total_depth = total_depth, ref_depth = ref_depth,
+                     mut_depth = mut_depth) %>%
         dplyr::mutate(mut_vaf = mut_depth / total_depth)
   }) %>%
   dplyr::bind_rows()
 
 # write mut calls to out
 geno %>%
+  dplyr::full_join(muts) %>%
   readr::write_tsv("genotyped_mutations.tsv")
