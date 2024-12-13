@@ -6,7 +6,6 @@ library(optparse)
 
 # options
 option_list <- list(
-  make_option("--donor_id", type = "character"),
   make_option("--chr", type = "character"),
   make_option("--mutations", type = "character"),
   make_option("--bam", type = "character"),
@@ -21,7 +20,7 @@ saveRDS(opts, "opts.rds")
 # get mutations
 muts <-
   readr::read_tsv(opts$mutations) %>%
-  dplyr::filter(chr == opts$chr, donor_id == opts$donor_id) %>%
+  dplyr::filter(chr == opts$chr) %>%
   dplyr::mutate(
     type = dplyr::case_when(nchar(ref) == 1 & nchar(mut) == 1 ~ "snv",
                             nchar(ref) == 1 & nchar(mut) > 1 ~ "ins",
@@ -44,8 +43,8 @@ geno <-
     paste(chr, pos, ref, mut, type, "\n") %>% cat()
 
       # query bam
-      calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, min_bq = opts$min_bq,
-                              mask = opts$mask, min_mq = opts$min_mq)
+      calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, q = opts$min_bq,
+                              mask = opts$mask, mq = opts$min_mq)
 
       # count all reads at site
       total_depth <- sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t",

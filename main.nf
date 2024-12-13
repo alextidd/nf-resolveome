@@ -12,7 +12,6 @@ include { samtools_index } from '../modules/samtools_index.nf'
 include { MOSDEPTH       } from './modules/nf-core/mosdepth/main'
 include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
 
-
 // get gene coordinates
 process get_gene_coords {
   tag "${gene}"
@@ -134,7 +133,6 @@ process genotype_mutations {
   script:
   """
   genotype_mutations.R \\
-    --donor_id ${meta.donor_id} \\
     --chr ${chr} \\
     --mutations ${mutations} \\
     --bam ${bam} \\
