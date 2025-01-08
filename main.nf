@@ -6,10 +6,11 @@ nextflow.enable.dsl=2
 // params set in nextflow.config
 
 // import modules
-include { get_irods_bam  } from '../modules/get_irods_bam.nf'
-include { get_local_bam  } from '../modules/get_local_bam.nf'
-include { samtools_index } from '../modules/samtools_index.nf'
-include { MOSDEPTH       } from './modules/nf-core/mosdepth/main'
+include { get_irods_bam       } from '../modules/get_irods_bam.nf'
+include { get_local_bam       } from '../modules/get_local_bam.nf'
+include { samtools_index      } from '../modules/samtools_index.nf'
+include { bedtools_bamtofastq } from '../modules/bedtools_bamtofastq.nf'
+include { MOSDEPTH            } from './modules/nf-core/mosdepth/main'
 include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
 
 // get gene coordinates
@@ -238,11 +239,6 @@ workflow {
             [meta, file(row.mutations, checkIfExists: true)]
     }
     | set { ch_mutations }
-  
-  // get gene coords
-  Channel.of(params.genes.split(','))
-    | set { ch_gene }
-  get_gene_coords(ch_gene)
 
   // get rmd file
   rmd = file("${baseDir}/bin/report.Rmd")
@@ -259,14 +255,24 @@ workflow {
   // index bams
   samtools_index(ch_bam2)
 
-  // initialize fasta file with meta map:
+  // get fastq
+  if ( params.bamtofastq ) {
+    bedtools_bamtofastq(ch_bam2)
+  }
+
+  // initialize fasta file with meta map
   fasta = params.fasta ? Channel.fromPath(params.fasta).map{ it -> [ [id:it.baseName], it ] }.collect() : Channel.empty()
 
   // get bait set
   bait_set = Channel.fromPath(params.bait_set, checkIfExists: true)
 
-  // mosdepth
+  // get genome-wide coverage
   MOSDEPTH(samtools_index.out.combine(bait_set), fasta)
+
+  // get gene coords
+  Channel.of(params.genes.split(','))
+    | set { ch_gene }
+  get_gene_coords(ch_gene)
 
   // get gene coverage
   get_gene_cov(MOSDEPTH.out.per_base_bed.combine(get_gene_coords.out))

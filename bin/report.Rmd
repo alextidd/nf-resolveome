@@ -51,7 +51,7 @@ dat <-
                     !grepl("random|HLA", chr), !grepl("alt$", chr))
   })
 
-# create a source col if none present, split to list by source
+# create a mutation source col if none present, split to list by source
 if (!"source" %in% colnames(dat$geno)) {
   dat$geno$source <- "mutations"
 }

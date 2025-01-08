@@ -59,6 +59,10 @@
     },
     "max_time": {
       "type": "string"
+    },
+    "bamtofastq": {
+      "type": "boolean",
+      "default": true
     }
   },
   "required": ["samplesheet", "fasta", "bait_set", "genes"]
