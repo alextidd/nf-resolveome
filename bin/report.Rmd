@@ -38,7 +38,7 @@ library(ggplot2)
 ```{r load_data}
 dat <-
   list("geno" = list(file = params$geno, col_names = TRUE),
-       "summary_txt" = list(file = params$summary_txt, col_names = TRUE), 
+       "summary_txt" = list(file = params$summary_txt, col_names = TRUE),
        "global_txt" = list(file = params$global_txt, col_names = c("chr", "cov", "prop")),
        "regions_txt" = list(file = params$regions_txt, col_names = c("chr", "cov", "prop"))) %>%
   purrr::map(function(dat_i) {
@@ -183,7 +183,7 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
     dplyr::count(id, name = "n_muts") %>%
     tibble::column_to_rownames("id")
 
-  # replace NAs with 0 or another value depending on your context
+  # replace NAs with 0 
   heatmap_matrix[is.na(heatmap_matrix)] <- 0
 
   # prepare annotations for columns
@@ -215,6 +215,44 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
     dplyr::filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
     plot_vaf_heatmap(p_source)
   print(p)
+})
+```
+
+### VAF distribution across chromosomes
+
+```{r chr_vaf_dist, fig.width = 15, fig.height = 4}
+purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
+  p_dat_by_id <- split(p_dat, p_dat$id)
+  purrr::walk2(names(p_dat_by_id), p_dat_by_id, function(p_id, p_dat2) {
+    p <-
+      p_dat2 %>%
+      dplyr::select(id, chr, pos, mut_vaf) %>%
+      dplyr::mutate(mut_baf = 1 - mut_vaf,
+                    chr = factor(sub("^chr", "", chr), levels = c(as.character(1:22), "X", "Y"))) %>%
+      dplyr::arrange(chr, pos) %>%
+      dplyr::group_by(chr) %>%
+      dplyr::mutate(chr_alternating = dplyr::cur_group_id() %% 2,
+                    min_pos = min(pos), max_pos = max(pos)) %>%
+      tidyr::pivot_longer(cols = c("mut_vaf", "mut_baf"), names_to = "vaf_type") %>%
+      ggplot(aes(x = pos, y = value)) +
+      geom_rect(aes(ymin = 0, ymax = 1, xmin = min_pos, xmax = max_pos,
+                    fill = as.factor(chr_alternating))) +
+      geom_hline(yintercept = 0.5, colour = "red") +
+      geom_point(size = 0.5) +
+      scale_x_continuous(expand = c(0, 0)) +
+      scale_fill_manual(values = c("lightgrey", "white")) +
+      ggh4x::facet_grid2(id ~ chr, scales = "free_x", space = "free_x") +
+      theme_classic() +
+      theme(panel.spacing = unit(0, "lines"),
+            panel.border = element_rect(color = "grey", fill = NA,
+                                        linewidth = 0),
+            strip.background = element_rect(color = "grey", fill = NA,
+                                            linewidth = 0, linetype = "solid"),
+            axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+            legend.position = "none") +
+      ggtitle(paste(p_source, "-", p_id, "- VAF distribution across chromosomes"))
+    print(p)
+  })
 })
 ```
 
