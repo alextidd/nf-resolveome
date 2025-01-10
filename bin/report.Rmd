@@ -141,7 +141,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
     theme(legend.position = "none")
   print(p)
 
-  # plot VAF distribution with increasing mut depth
+  # plot VAF distribution with increasing alt depth
   seq(1, 10) %>%
     purrr::walk(function(min_mut_depth) {
       p <-
@@ -149,7 +149,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
         dplyr::filter(mut_depth >= min_mut_depth) %>%
         plot_vaf_dist() +
         ggtitle(paste(p_source, "- Distribution of VAFs, min", min_mut_depth,
-                      "mut depth"))
+                      "alt depth"))
       print(p)
     })
 })
@@ -164,7 +164,7 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
   # prepare data
   p_dat2 <-
     p_dat %>%
-    dplyr::mutate(mut_id = paste(chr, pos, ref, mut, sep = "_")) %>%
+    dplyr::mutate(mut_id = paste(chr, pos, ref, alt, sep = "_")) %>%
     # count number of cells with each mutation
     dplyr::add_count(mut_id, name = "n_cells_w_mut")
 

@@ -22,9 +22,9 @@ muts <-
   readr::read_tsv(opts$mutations) %>%
   dplyr::filter(chr == opts$chr) %>%
   dplyr::mutate(
-    type = dplyr::case_when(nchar(ref) == 1 & nchar(mut) == 1 ~ "snv",
-                            nchar(ref) == 1 & nchar(mut) > 1 ~ "ins",
-                            nchar(ref) > 1 & nchar(mut) == 1 ~ "del",
+    type = dplyr::case_when(nchar(ref) == 1 & nchar(alt) == 1 ~ "snv",
+                            nchar(ref) == 1 & nchar(alt) > 1 ~ "ins",
+                            nchar(ref) > 1 & nchar(alt) == 1 ~ "del",
                             TRUE ~ "complex"))
 
 # check for mutations that are not snv / ins / del                            
@@ -38,9 +38,9 @@ if ("complex" %in% muts$type) {
 # genotype all sites
 geno <-
   muts %>%
-  dplyr::distinct(chr, pos, ref, mut, type) %>%
-  purrr::pmap(function(chr, pos, ref, mut, type) {
-    paste(chr, pos, ref, mut, type, "\n") %>% cat()
+  dplyr::distinct(chr, pos, ref, alt, type) %>%
+  purrr::pmap(function(chr, pos, ref, alt, type) {
+    paste(chr, pos, ref, alt, type, "\n") %>% cat()
 
     # query bam
     calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, q = opts$min_bq,
@@ -59,22 +59,22 @@ geno <-
     # count mutant reads at site
     if (type %in% c("snv", "dnv", "mnv")) {
       # count mutant reads at site
-      mut_depth <- sum(calls[, c(mut, tolower(mut))], na.rm = TRUE)
+      mut_depth <- sum(calls[, c(alt, tolower(alt))], na.rm = TRUE)
     } else if (type %in% c("ins", "del")) {
       # count ins or del reads at site (don't check sequence)
       mut_depth <- sum(calls[, c(type, toupper(type))], na.rm = TRUE)
     } else {
-      stop("mut type not recognised!")
+      stop("alt type not recognised!")
     }
     
-    tibble::tibble(chr = chr, pos = pos, ref = ref, mut = mut,
+    tibble::tibble(chr = chr, pos = pos, ref = ref, alt = alt,
                     total_depth = total_depth, ref_depth = ref_depth,
                     mut_depth = mut_depth) %>%
       dplyr::mutate(mut_vaf = mut_depth / total_depth)
   }) %>%
   dplyr::bind_rows()
 
-# write mut calls to out
+# write alt calls to out
 geno %>%
   dplyr::full_join(muts) %>%
   readr::write_tsv("genotyped_mutations.tsv")
