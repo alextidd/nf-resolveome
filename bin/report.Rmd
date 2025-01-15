@@ -213,7 +213,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   p <-
     p_dat %>%
     dplyr::filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
-    plot_vaf_heatmap(p_source)
+    plot_vaf_heatmap(paste(p_source, "(coding muts only)"))
   print(p)
 })
 ```

@@ -223,7 +223,7 @@ workflow {
   // get input bams
   Channel
     .fromPath(params.samplesheet)
-    .splitCsv(header: true, sep: "\t")
+    .splitCsv(header: true)
     | map { row ->
             def meta = [donor_id: row.donor_id, id: row.id]
             [meta, file(row.bam)]
@@ -233,7 +233,7 @@ workflow {
   // get input mutations
   Channel
     .fromPath(params.samplesheet)
-    .splitCsv(header: true, sep: "\t")
+    .splitCsv(header: true)
     | map { row ->
             def meta = [donor_id: row.donor_id, id: row.id]
             [meta, file(row.mutations, checkIfExists: true)]
