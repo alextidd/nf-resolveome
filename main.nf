@@ -166,10 +166,34 @@ process concat_mutations {
   """
 }
 
+// plot BAF
+process plot_baf {
+  tag "${meta.id}"
+  label 'normal10gb'
+  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/",
+    mode: "copy"
+  errorStrategy 'ignore'
+  
+  input:
+  tuple val(meta), path(geno)
+
+  output:
+  tuple val(meta), path(geno), emit: out
+  path("${meta.id}_*_baf_plot.png"), emit: plot
+
+  script:
+  """
+  plot_baf.R \\
+    --geno ${geno} \\
+    --id ${meta.id}
+  """
+}
+
 // report
 process report {
   tag "${meta.donor_id}"
-  label 'normal50gb'
+  queue "week"
+  memory { 200.GB * task.attempt }
   publishDir "${params.out_dir}/${meta.donor_id}/",
     mode: "copy"
   
@@ -289,8 +313,11 @@ workflow {
   genotype_mutations(samtools_index.out.join(annotate_mutations.out).combine(chromosomes))
   concat_mutations(genotype_mutations.out.groupTuple(size: 24))
 
+  // plot BAF by chr and overall
+  plot_baf(concat_mutations.out)
+
   // generate report
-  concat_mutations.out \
+  plot_baf.out.out \
   .join(concat_gene_cov.out)
   .join(MOSDEPTH.out.summary_txt) \
   .join(MOSDEPTH.out.global_txt) \

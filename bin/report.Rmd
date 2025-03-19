@@ -183,7 +183,7 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
     dplyr::count(id, name = "n_muts") %>%
     tibble::column_to_rownames("id")
 
-  # replace NAs with 0 
+  # replace NAs with 0
   heatmap_matrix[is.na(heatmap_matrix)] <- 0
 
   # prepare annotations for columns

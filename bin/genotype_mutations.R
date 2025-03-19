@@ -27,13 +27,13 @@ muts <-
                             nchar(ref) > 1 & nchar(alt) == 1 ~ "del",
                             TRUE ~ "complex"))
 
-# check for mutations that are not snv / ins / del                            
+# check for mutations that are not snv / ins / del
 if ("complex" %in% muts$type) {
   message("Complex mutations are not supported!")
   message(paste(muts %>% dplyr::filter(type == "complex") %>% nrow(),
                 "complex mutation(s) were found and will be removed."))
   muts <- muts %>% dplyr::filter(type != "complex")
-} 
+}
 
 # genotype all sites
 geno <-
@@ -50,7 +50,7 @@ geno <-
     total_depth <- sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t",
                                   "DEL", "INS", "del", "ins")],
                         na.rm = TRUE)
-    
+
     # count ref reads at site
     # take first character (in case it is a deletion)
     ref_1 <- substr(ref, 1, 1)
@@ -66,10 +66,10 @@ geno <-
     } else {
       stop("alt type not recognised!")
     }
-    
+
     tibble::tibble(chr = chr, pos = pos, ref = ref, alt = alt,
-                    total_depth = total_depth, ref_depth = ref_depth,
-                    mut_depth = mut_depth) %>%
+                   total_depth = total_depth, ref_depth = ref_depth,
+                   mut_depth = mut_depth) %>%
       dplyr::mutate(mut_vaf = mut_depth / total_depth)
   }) %>%
   dplyr::bind_rows()
