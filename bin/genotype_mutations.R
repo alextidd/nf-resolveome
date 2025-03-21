@@ -6,12 +6,12 @@ library(optparse)
 
 # options
 option_list <- list(
-  make_option("--chr", type = "character"),
   make_option("--mutations", type = "character"),
   make_option("--bam", type = "character"),
   make_option("--min_bq", type = "numeric"),
   make_option("--mask", type = "numeric"),
-  make_option("--min_mq", type = "numeric"))
+  make_option("--min_mq", type = "numeric"),
+  make_option("--id", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -20,7 +20,6 @@ saveRDS(opts, "opts.rds")
 # get mutations
 muts <-
   readr::read_tsv(opts$mutations) %>%
-  dplyr::filter(chr == opts$chr) %>%
   dplyr::mutate(
     type = dplyr::case_when(nchar(ref) == 1 & nchar(alt) == 1 ~ "snv",
                             nchar(ref) == 1 & nchar(alt) > 1 ~ "ins",
@@ -77,4 +76,5 @@ geno <-
 # write alt calls to out
 geno %>%
   dplyr::full_join(muts) %>%
-  readr::write_tsv("genotyped_mutations.tsv")
+  dplyr::mutate(id = opts$id) %>%
+  readr::write_tsv(paste(opts$id, "genotyped_mutations.tsv", sep = "_"))

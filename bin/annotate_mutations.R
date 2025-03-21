@@ -5,7 +5,8 @@ library(magrittr)
 library(optparse)
 
 # options
-option_list <- list(make_option("--mutations", type = "character"))
+option_list <- list(make_option("--mutations", type = "character"),
+                    make_option("--donor_id", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -21,7 +22,7 @@ dndscv_in <-
   dplyr::distinct()
 dndscv_out <-
   dndscv::dndscv(dndscv_in, max_muts_per_gene_per_sample = Inf,
-                 max_coding_muts_per_sample = Inf)
+                 max_coding_muts_per_sample = Inf, outp = 1)
 
 # collapse multiple annotations of the same mutation
 # (we want to maintain 1 mutation-x-cell per row)
@@ -38,4 +39,4 @@ annot_mutations <- dplyr::right_join(annots, mutations)
 
 # save annotated mutations
 annot_mutations %>%
-  readr::write_tsv("annotated_mutations.tsv")
+  readr::write_tsv(paste0(opts$donor_id, "_annotated_mutations.tsv"))

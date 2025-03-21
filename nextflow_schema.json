@@ -60,9 +60,8 @@
     "max_time": {
       "type": "string"
     },
-    "bamtofastq": {
-      "type": "boolean",
-      "default": true
+    "annotate_mutations": {
+      "type": "boolean"
     }
   },
   "required": ["samplesheet", "fasta", "bait_set", "genes"]
