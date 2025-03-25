@@ -113,7 +113,7 @@ workflow {
   ch_snps_split = ch_snps.splitText(by: 100000, file: true, keepHeader: true)
   ch_bams_x_snps = samtools_index.out.combine(ch_snps_split, by: 0)
   genotype_snps(ch_bams_x_snps)
-  concat_snps(genotype_snps.out.groupTuple())
+  concat_snps(genotype_snps.out.groupTuple(by: [0, 1]))
 
   // plot BAF from genotyped SNPs
   plot_baf(concat_snps.out)

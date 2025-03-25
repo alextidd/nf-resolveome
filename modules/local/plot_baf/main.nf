@@ -2,12 +2,11 @@
 process plot_baf {
   tag "${meta.id}"
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/",
+  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/${set}/",
     mode: "copy"
-  errorStrategy 'ignore'
   
   input:
-  tuple val(meta), path(geno)
+  tuple val(meta), val(set), path(geno)
 
   output:
   tuple val(meta), path(geno), emit: out

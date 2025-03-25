@@ -15,7 +15,7 @@ saveRDS(opts, "opts.rds")
 # opts <- list(id = "plate3_wellE11_dna_run49882", geno = "out/nf-resolveome/archive_20250313/PD63118/dna/plate3_wellE11_dna_run49882/genotyping/plate3_wellE11_dna_run49882_genotyped_mutations.tsv")
 
 # read geno
-geno <- readr::read_tsv(opts$geno) %>% {split(., .$source)}
+geno <- readr::read_tsv(opts$geno)
 
 # function: fit a binomial mixture model
 fit_binomial_mixture <- function(alt, cov) {
@@ -69,9 +69,7 @@ plot_baf <- function(p_dat, p_source) {
 }
 
 # plot baf
-purrr::map2(names(geno), geno, function(p_source, p_dat) {
-  p <- plot_baf(p_dat, p_source)
-  ragg::agg_png(paste0(opts$id, "_", p_source, "_baf_plot.png"), width = 2500, height = 600, res = 300)
-  print(p)
-  dev.off()
-})
+p <- plot_baf(geno, "caveman_snps")
+ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_plot.png"), width = 2500, height = 600, res = 300)
+print(p)
+dev.off()

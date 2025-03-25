@@ -6,7 +6,7 @@ process concat_snps {
     mode: "copy"
   
   input:
-  tuple val(meta), val(set), path(genos)
+  tuple val(meta), val(set), path(genos, stageAs: "?/*")
   
   output:
   tuple val(meta), val(set), path("${meta.id}_genotyped_mutations.tsv")
