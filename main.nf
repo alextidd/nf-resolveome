@@ -60,6 +60,9 @@ workflow {
             [meta, "snps", file(row.snps, checkIfExists: true)]
     }
     | set { ch_snps }
+  
+  // get refcds file
+  refcds = file(params.refcds, checkIfExists: true)
 
   // get rmd file
   rmd = file("${baseDir}/bin/report.Rmd")
@@ -103,7 +106,7 @@ workflow {
     | groupTuple(by: [0, 1])
     | set { ch_all_genos }
   concat_mutations(ch_all_genos)
-  annotate_mutations(concat_mutations.out)
+  annotate_mutations(concat_mutations.out, refcds)
 
   // // plot heatmap from genotyped mutations
   // generate_nr_nv(ch_all_genos)

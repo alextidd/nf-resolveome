@@ -62,6 +62,10 @@
     },
     "annotate_mutations": {
       "type": "boolean"
+    },
+    "refcds": {
+      "type": "string",
+      "default": "/lustre/scratch125/casm/team268im/at31/reference/dndscv/refcds_hg19.rda"
     }
   },
   "required": ["samplesheet", "fasta", "bait_set", "genes"]
