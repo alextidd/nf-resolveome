@@ -10,7 +10,7 @@ process plot_baf {
 
   output:
   tuple val(meta), path(geno), emit: out
-  path("${meta.id}_*_baf_plot.png"), emit: plot
+  path("${meta.id}_*_plot.png"), emit: plot
 
   script:
   """

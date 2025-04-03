@@ -28,8 +28,9 @@ fit_binomial_mixture <- function(alt, cov) {
 }
 
 # function: plot BAF
-plot_baf <- function(p_dat, p_source) {
-  p_dat %>%
+plot_baf <- function(p_dat, p_source, incl_binom = TRUE) {
+  p <-
+    p_dat %>%
     dplyr::filter(total_depth > 0) %>%
     # add baf banding from binomial mixture model
     dplyr::mutate(pos_bin = pos %/% 1e6) %>%
@@ -50,9 +51,8 @@ plot_baf <- function(p_dat, p_source) {
     # add line at vaf = 0.5
     geom_hline(yintercept = 0.5, colour = "red") +
     # add baf points
-    geom_point(size = 0.005, alpha = 0.01) +
+    geom_point(size = 0.005, alpha = 0.001) +
     # add baf bands
-    geom_point(aes(x = pos, y = lower_baf_band), colour = "green", size = 0.1) +
     scale_x_continuous(expand = c(0, 0)) +
     scale_fill_manual(values = c("lightgrey", "white")) +
     ggh4x::facet_grid2(. ~ chr, scales = "free_x", space = "free_x") +
@@ -66,10 +66,24 @@ plot_baf <- function(p_dat, p_source) {
           legend.position = "none") +
     labs(title = paste(opts$id, "-", p_source),
          subtitle = "BAF distribution across chromosomes")
+  
+  # optionally include minimum binomial mixture model estimate
+  if (plot_binom) {
+    p <-
+      p +
+      geom_point(aes(x = pos, y = lower_baf_band), colour = "green", size = 0.1)
+  }
+
+  # return
+  p
 }
 
 # plot baf
 p <- plot_baf(geno, "caveman_snps")
+ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_w_binom_plot.png"), width = 2500, height = 600, res = 300)
+print(p)
+dev.off()
+p <- plot_baf(geno, "caveman_snps", incl_bin = FALSE)
 ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_plot.png"), width = 2500, height = 600, res = 300)
 print(p)
 dev.off()

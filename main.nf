@@ -89,8 +89,7 @@ workflow {
   MOSDEPTH(samtools_index.out.combine(bait_set), fasta)
 
   // get gene coords
-  Channel.of(params.genes.split(','))
-    | set { ch_gene }
+  ch_gene = Channel.fromPath(params.genes).splitText().map{it -> it.trim()}
   get_gene_coords(ch_gene)
 
   // get gene coverage

@@ -7,7 +7,7 @@ library(optparse)
 # options
 option_list <- list(make_option("--mutations", type = "character"),
                     make_option("--donor_id", type = "character"),
-                    makr_option("--refcds", type = "character"))
+                    make_option("--refcds", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -24,7 +24,7 @@ dndscv_in <-
 dndscv_out <-
   dndscv::dndscv(dndscv_in, max_muts_per_gene_per_sample = Inf,
                  max_coding_muts_per_sample = Inf, outp = 1,
-                 refdb = params$refcds)
+                 refdb = opts$refcds)
 
 # collapse multiple annotations of the same mutation
 # (we want to maintain 1 mutation-x-cell per row)
