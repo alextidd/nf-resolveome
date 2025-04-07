@@ -17,10 +17,10 @@ include { genotype_mutations; genotype_mutations as genotype_snps } from './modu
 include { concat_snps         } from './modules/local/concat_snps'
 include { concat_mutations    } from './modules/local/concat_mutations'
 include { generate_nr_nv      } from './modules/local/generate_nr_nv'
-include { plot_heatmap        } from './modules/local/plot_heatmap'
 include { plot_baf            } from './modules/local/plot_baf'
 include { report              } from './modules/local/report'
-include { MOSDEPTH            } from './modules/nf-core/mosdepth/main'
+include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
+include { plot_vdj_cov        } from './modules/local/plot_vdj_cov'
 include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
 
 workflow {
@@ -82,14 +82,20 @@ workflow {
   // index bams
   samtools_index(ch_bam2)
 
-  // get bait set
-  bait_set = Channel.fromPath(params.bait_set, checkIfExists: true)
+  // get genome-wide and immune panel coverage
+  bait_set_hyb = Channel.fromPath(params.bait_set_hyb, checkIfExists: true)
+  MOSDEPTH(samtools_index.out.combine(bait_set_hyb), fasta)
 
-  // get genome-wide coverage
-  MOSDEPTH(samtools_index.out.combine(bait_set), fasta)
+  // get VDJ coverage
+  bait_set_vdj = Channel.fromPath(params.bait_set_vdj, checkIfExists: true)
+  MOSDEPTH_VDJ(samtools_index.out.combine(bait_set_vdj), fasta)
+
+  // plot VDJ coverage
+  bait_set_vdj2 = file(params.bait_set_vdj, checkIfExists: true)
+  plot_vdj_cov(MOSDEPTH_VDJ.out.regions_bed, bait_set_vdj2)
 
   // get gene coords
-  ch_gene = Channel.fromPath(params.genes).splitText().map{it -> it.trim()}
+  ch_gene = Channel.fromPath(params.genes, checkIfExists: true).splitText().map{it -> it.trim()}
   get_gene_coords(ch_gene)
 
   // get gene coverage
@@ -106,10 +112,6 @@ workflow {
     | set { ch_all_genos }
   concat_mutations(ch_all_genos)
   annotate_mutations(concat_mutations.out, refcds)
-
-  // // plot heatmap from genotyped mutations
-  // generate_nr_nv(ch_all_genos)
-  // plot_heatmap(generate_nr_nv.out.out)
 
   // genotype SNPs in chunks of 100,000
   ch_snps_split = ch_snps.splitText(by: 100000, file: true, keepHeader: true)
