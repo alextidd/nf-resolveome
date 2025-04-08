@@ -6,22 +6,23 @@ nextflow.enable.dsl=2
 // params set in nextflow.config
 
 // import modules
-include { get_irods_bam       } from './modules/local/get_irods_bam'
-include { get_local_bam       } from './modules/local/get_local_bam'
-include { samtools_index      } from './modules/local/samtools_index'
-include { get_gene_coords     } from './modules/local/get_gene_coords'
-include { get_gene_cov        } from './modules/local/get_gene_cov'
-include { concat_gene_cov     } from './modules/local/concat_gene_cov'
-include { annotate_mutations  } from './modules/local/annotate_mutations'
+include { get_irods_bam        } from './modules/local/get_irods_bam'
+include { get_local_bam        } from './modules/local/get_local_bam'
+include { samtools_index       } from './modules/local/samtools_index'
+include { get_gene_coords      } from './modules/local/get_gene_coords'
+include { get_gene_cov         } from './modules/local/get_gene_cov'
+include { concat_gene_cov      } from './modules/local/concat_gene_cov'
+include { annotate_mutations   } from './modules/local/annotate_mutations'
 include { genotype_mutations; genotype_mutations as genotype_snps } from './modules/local/genotype_mutations'
-include { concat_snps         } from './modules/local/concat_snps'
-include { concat_mutations    } from './modules/local/concat_mutations'
-include { generate_nr_nv      } from './modules/local/generate_nr_nv'
-include { plot_baf            } from './modules/local/plot_baf'
-include { report              } from './modules/local/report'
+include { concat_mutations; concat_mutations as concat_snps  } from './modules/local/concat_mutations'
+include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
+include { generate_nr_nv       } from './modules/local/generate_nr_nv'
+include { plot_baf             } from './modules/local/plot_baf'
+include { report               } from './modules/local/report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
-include { plot_vdj_cov        } from './modules/local/plot_vdj_cov'
+include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
 include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
+include { concat_snps } from './modules/local/concat_snps/main.nf'
 
 workflow {
 
@@ -117,7 +118,12 @@ workflow {
   ch_snps_split = ch_snps.splitText(by: 100000, file: true, keepHeader: true)
   ch_bams_x_snps = samtools_index.out.combine(ch_snps_split, by: 0)
   genotype_snps(ch_bams_x_snps)
-  concat_snps(genotype_snps.out.groupTuple(by: [0, 1]))
+  concat_snps_per_cell(genotype_snps.out.groupTuple(by: [0, 1]))
+  concat_snps_per_cell.out
+    | map { meta, set, geno -> [meta.subMap('donor_id'), set, geno] }
+    | groupTuple(by: [0, 1])
+    | set { ch_all_snps }
+  concat_snps(ch_all_snps)
 
   // plot BAF from genotyped SNPs
   plot_baf(concat_snps.out)

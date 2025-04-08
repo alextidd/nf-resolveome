@@ -68,7 +68,7 @@ plot_baf <- function(p_dat, p_source, incl_binom = TRUE) {
          subtitle = "BAF distribution across chromosomes")
   
   # optionally include minimum binomial mixture model estimate
-  if (plot_binom) {
+  if (incl_binom) {
     p <-
       p +
       geom_point(aes(x = pos, y = lower_baf_band), colour = "green", size = 0.1)
@@ -83,7 +83,7 @@ p <- plot_baf(geno, "caveman_snps")
 ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_w_binom_plot.png"), width = 2500, height = 600, res = 300)
 print(p)
 dev.off()
-p <- plot_baf(geno, "caveman_snps", incl_bin = FALSE)
+p <- plot_baf(geno, "caveman_snps", incl_binom = FALSE)
 ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_plot.png"), width = 2500, height = 600, res = 300)
 print(p)
 dev.off()

@@ -9,13 +9,13 @@ process concat_mutations {
   tuple val(meta), val(set), path(genos)
   
   output:
-  tuple val(meta), val(set), path("${meta.donor_id}_genotyped_mutations.tsv")
+  tuple val(meta), val(set), path("${meta.donor_id}_genotyped_${set}.tsv")
   
   script:
   """
-  head -1 ${genos[0]} > ${meta.donor_id}_genotyped_mutations.tsv
+  head -1 ${genos[0]} > ${meta.donor_id}_genotyped_${set}.tsv
   for file in ${genos} ; do
-    sed 1d \$file >> ${meta.donor_id}_genotyped_mutations.tsv
+    sed 1d \$file >> ${meta.donor_id}_genotyped_${set}.tsv
   done
   """
 }
