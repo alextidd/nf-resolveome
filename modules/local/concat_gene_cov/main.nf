@@ -2,7 +2,7 @@
 process concat_gene_cov {
   tag "${meta.id}"
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/",
+  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/mosdepth/",
     mode: "copy"
   
   input:

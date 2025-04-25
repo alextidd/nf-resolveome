@@ -22,7 +22,6 @@ include { report               } from './modules/local/report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
 include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
-include { concat_snps } from './modules/local/concat_snps/main.nf'
 
 workflow {
 
@@ -126,7 +125,7 @@ workflow {
   concat_snps(ch_all_snps)
 
   // plot BAF from genotyped SNPs
-  plot_baf(concat_snps.out)
+  plot_baf(concat_snps_per_cell.out)
 
   // generate report
   plot_baf.out.out \

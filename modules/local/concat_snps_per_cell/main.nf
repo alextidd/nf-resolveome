@@ -2,8 +2,6 @@
 process concat_snps_per_cell {
   tag "${meta.id}"
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/${set}/",
-    mode: "copy"
   
   input:
   tuple val(meta), val(set), path(genos, stageAs: "?/*")

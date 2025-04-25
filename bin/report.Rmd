@@ -30,6 +30,7 @@ knitr::opts_chunk$set(warning = FALSE,
 
 # libraries
 library(magrittr)
+library(dplyr)
 library(ggplot2)
 ```
 
@@ -45,10 +46,10 @@ dat <-
     dat_i$file %>%
       purrr::map(readr::read_tsv, col_names = dat_i$col_names) %>%
       setNames(params$ids) %>%
-      dplyr::bind_rows(.id = "id") %>%
-      dplyr::rename_with(~ dplyr::if_else(. == "chrom", "chr", .), everything()) %>%
-      dplyr::filter(!grepl("^GL", chr), !grepl("Un", chr),
-                    !grepl("random|HLA", chr), !grepl("alt$", chr))
+      bind_rows(.id = "id") %>%
+      rename_with(~ if_else(. == "chrom", "chr", .), everything()) %>%
+      filter(!grepl("^GL", chr), !grepl("Un", chr),
+             !grepl("random|HLA", chr), !grepl("alt$", chr))
   })
 
 # create a mutation source col if none present, split to list by source
@@ -62,9 +63,9 @@ dat$geno <- split(dat$geno, dat$geno$source)
 
 ```{r cov_mean}
 dat$summary_txt %>%
-  dplyr::filter(chr %in% c("total", "total_region")) %>%
-  dplyr::mutate(lvl = ifelse(grepl("region$", chr), "region", "global"),
-                chr = gsub("_.*", "", chr)) %>%
+  filter(chr %in% c("total", "total_region")) %>%
+  mutate(lvl = ifelse(grepl("region$", chr), "region", "global"),
+         chr = gsub("_.*", "", chr)) %>%
   ggplot(aes(x = reorder(id, -mean), y = mean, fill = lvl)) +
   geom_col(position = "dodge") +
   theme_minimal() +
@@ -76,8 +77,8 @@ dat$summary_txt %>%
 
 ```{r cov_dist}
 dat[c("global_txt", "regions_txt")] %>%
-  dplyr::bind_rows(.id = "lvl") %>%
-  dplyr::filter(chr == "total", prop >= 0.01) %>%
+  bind_rows(.id = "lvl") %>%
+  filter(chr == "total", prop >= 0.01) %>%
   ggplot(aes(x = cov, y = prop, color = id, group = id)) +
   geom_line() +
   labs(title = paste("Coverage distribution"),
@@ -96,14 +97,14 @@ plot_vaf_dist <- function(p_dat) {
   mut_depth_bins <- c("0", "1", ">1", ">5", ">10", ">50")
   p_dat2 <-
     p_dat %>%
-    dplyr::mutate(mut_vaf = mut_depth / total_depth,
-                  mut_depth_bin = dplyr::case_when(mut_depth > 50 ~ ">50",
-                                                    mut_depth > 10 ~ ">10",
-                                                    mut_depth > 5 ~ ">5",
-                                                    mut_depth > 1 ~ ">1",
-                                                    mut_depth == 1 ~ "1",
-                                                    mut_depth == 0 ~ "0") %>%
-                    factor(levels = mut_depth_bins))
+    mutate(mut_vaf = mut_depth / total_depth,
+           mut_depth_bin = case_when(mut_depth > 50 ~ ">50",
+                                     mut_depth > 10 ~ ">10",
+                                     mut_depth > 5 ~ ">5",
+                                     mut_depth > 1 ~ ">1",
+                                     mut_depth == 1 ~ "1",
+                                     mut_depth == 0 ~ "0") %>%
+             factor(levels = mut_depth_bins))
   p_dat2 %>%
     ggplot(aes(x = mut_vaf, fill = mut_depth_bin, colour = mut_depth_bin)) +
     geom_histogram(bins = 100) +
@@ -126,7 +127,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   # plot non-zero VAF distribution
   p <-
     p_dat %>%
-    dplyr::filter(mut_depth > 0) %>%
+    filter(mut_depth > 0) %>%
     plot_vaf_dist() +
     ggtitle(paste(p_source, "- Distribution of non-zero VAFs"))
   print(p)
@@ -146,7 +147,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
     purrr::walk(function(min_mut_depth) {
       p <-
         p_dat %>%
-        dplyr::filter(mut_depth >= min_mut_depth) %>%
+        filter(mut_depth >= min_mut_depth) %>%
         plot_vaf_dist() +
         ggtitle(paste(p_source, "- Distribution of VAFs, min", min_mut_depth,
                       "alt depth"))
@@ -164,9 +165,9 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
   # prepare data
   p_dat2 <-
     p_dat %>%
-    dplyr::mutate(mut_id = paste(chr, pos, ref, alt, sep = "_")) %>%
+    mutate(mut_id = paste(chr, pos, ref, alt, sep = "_")) %>%
     # count number of cells with each mutation
-    dplyr::add_count(mut_id, name = "n_cells_w_mut")
+    add_count(mut_id, name = "n_cells_w_mut")
 
   # reshape data for heatmap
   heatmap_data <-
@@ -174,13 +175,13 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
     reshape2::dcast(mut_id + n_cells_w_mut ~ id, value.var = "mut_vaf")
   rownames(heatmap_data) <- heatmap_data$mut_id
   heatmap_matrix <- as.matrix(heatmap_data[, -c(1:3)]) # drop annotations
-  n_total_muts <- dplyr::n_distinct(p_dat2$mut_id)
-  n_total_cells <- dplyr::n_distinct(p_dat2$id)
+  n_total_muts <- n_distinct(p_dat2$mut_id)
+  n_total_cells <- n_distinct(p_dat2$id)
 
   # calculate the number of mutations per column (id)
   annotation_col <-
     p_dat2 %>%
-    dplyr::count(id, name = "n_muts") %>%
+    count(id, name = "n_muts") %>%
     tibble::column_to_rownames("id")
 
   # replace NAs with 0
@@ -207,12 +208,12 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
 purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   p <-
     p_dat %>%
-    dplyr::filter(mut_depth > 5, mut_vaf > 0.1) %>%
+    filter(mut_depth > 5, mut_vaf > 0.1) %>%
     plot_vaf_heatmap(p_source)
   print(p)
   p <-
     p_dat %>%
-    dplyr::filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
+    filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
     plot_vaf_heatmap(paste(p_source, "(coding muts only)"))
   print(p)
 })
@@ -226,12 +227,12 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   purrr::walk2(names(p_dat_by_id), p_dat_by_id, function(p_id, p_dat2) {
     p <-
       p_dat2 %>%
-      dplyr::select(id, chr, pos, mut_vaf) %>%
-      dplyr::mutate(mut_baf = 1 - mut_vaf,
+      select(id, chr, pos, mut_vaf) %>%
+      mutate(mut_baf = 1 - mut_vaf,
                     chr = factor(sub("^chr", "", chr), levels = c(as.character(1:22), "X", "Y"))) %>%
-      dplyr::arrange(chr, pos) %>%
-      dplyr::group_by(chr) %>%
-      dplyr::mutate(chr_alternating = dplyr::cur_group_id() %% 2,
+      arrange(chr, pos) %>%
+      group_by(chr) %>%
+      mutate(chr_alternating = cur_group_id() %% 2,
                     min_pos = min(pos), max_pos = max(pos)) %>%
       tidyr::pivot_longer(cols = c("mut_vaf", "mut_baf"), names_to = "vaf_type") %>%
       ggplot(aes(x = pos, y = value)) +
@@ -265,11 +266,11 @@ gene_covs <-
     p_dat <-
       file %>%
       readr::read_tsv(col_types = list("chr" = readr::col_character())) %>%
-      dplyr::mutate(start2 = start, end2 = end) %>%
-      dplyr::group_by(chr, gene, cov, id, start, end) %>%
-      dplyr::reframe(pos = start2:end2)
+      mutate(start2 = start, end2 = end) %>%
+      group_by(chr, gene, cov, id, start, end) %>%
+      reframe(pos = start2:end2)
   }) %>%
-  dplyr::bind_rows() %>%
+  bind_rows() %>%
   {split(., .$gene)}
 
 purrr::map2(names(gene_covs), gene_covs, function(p_gene, p_dat) {
