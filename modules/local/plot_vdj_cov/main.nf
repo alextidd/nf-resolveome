@@ -10,7 +10,7 @@ process plot_vdj_cov {
   path(bait_set_vdj)
 
   output:
-  path("${meta.id}_*_mean_cov.png"), emit: plot
+  tuple val(meta), path("${meta.id}_*_mean_cov.png")
 
   script:
   """

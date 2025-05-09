@@ -8,41 +8,72 @@
     "location": {
       "type": "string",
       "default": "irods",
-      "enum": ["irods", "local"]
+      "enum": ["irods", "local"],
+      "description": "Are the BAMs saved locally or on iRODs?"
     },
     "samplesheet": {
-      "type": "string"
+      "type": "string",
+      "description": "Comma-separated file containing the columns 'id', 'donor_id', 'bam', 'mutations', and 'snps'."
     },
     "fasta": {
-      "type": "string"
+      "type": "string",
+      "description": "Fasta file for the genome build."
     },
     "genome_build": {
       "type": "string",
       "default": "GRCh37",
-      "enum": ["GRCh37", "GRCh38"]
-    },
-    "genes": {
-      "type": "string"
+      "enum": ["GRCh37", "GRCh38"],
+      "description": "Genome build."
     },
     "min_bq": {
       "type": "integer",
-      "default": 30
+      "default": 30,
+      "description": "Minimum base quality for genotyping."
     },
     "min_mq": {
       "type": "integer",
-      "default": 30
+      "default": 30,
+      "description": "Minimum mapping quality for genotyping."
     },
     "mask": {
       "type": "integer",
-      "default": 3844
+      "default": 3844,
+      "description": "Mask for genotyping."
     },
     "out_dir": {
       "type": "string",
-      "default": "out/"
+      "default": "out/",
+      "description": "Output directory."
     },
     "no_chr": {
       "type": "boolean",
-      "default": true
+      "default": true,
+      "description": "Are the contigs prefaced with 'chr' (chr1) or without (1)?"
+    },
+    "annotate_mutations": {
+      "type": "boolean",
+      "description": "Annotate the genes and impacts of mutations using dndscv?"
+    },
+    "bait_set_hyb": {
+      "type": "string",
+      "description": "A bed file of the bait set used for hybridisation."
+    },
+    "bait_set_vdj": {
+      "type": "string",
+      "description": "A bed file of the VDJ regions of interest."
+    },
+    "baf_chrs": {
+      "type": "string",
+      "description": "Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3)."
+    },
+    "refcds": {
+      "type": "string",
+      "default": "/lustre/scratch125/casm/team268im/at31/reference/dndscv/refcds_hg19.rda",
+      "description": "Path to RefCDS Rda object from the dndscv package."
+    },
+    "knit_report": {
+      "type": "boolean",
+      "description": "Knit the report?"
     },
     "publish_dir_mode": {
       "type": "string",
@@ -56,20 +87,7 @@
     },
     "max_time": {
       "type": "string"
-    },
-    "annotate_mutations": {
-      "type": "boolean"
-    },
-    "refcds": {
-      "type": "string",
-      "default": "/lustre/scratch125/casm/team268im/at31/reference/dndscv/refcds_hg19.rda"
-    },
-    "bait_set_hyb": {
-      "type": "string"
-    },
-    "bait_set_vdj": {
-      "type": "string"
     }
   },
-  "required": ["samplesheet", "fasta", "genes"]
+  "required": ["samplesheet", "fasta"]
 }

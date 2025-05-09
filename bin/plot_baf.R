@@ -7,7 +7,8 @@ library(ggplot2)
 
 # options
 option_list <- list(make_option("--geno", type = "character"),
-                    make_option("--id", type = "character"))
+                    make_option("--id", type = "character"),
+                    make_option("--baf_chrs", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -91,7 +92,7 @@ plot_baf <- function(p_dat, p_source, incl_binom = TRUE,
     geom_point(size = p_size, alpha = p_alpha) +
     # add baf bands
     scale_x_continuous(expand = c(0, 0)) +
-    scale_fill_manual(values = c("lightgrey", "white")) +
+    scale_fill_manual(values = c("white", "lightgrey")) +
     ggh4x::facet_grid2(. ~ chr, scales = "free_x", space = "free_x") +
     theme_classic() +
     theme(panel.spacing = unit(0, "lines"),
@@ -118,7 +119,7 @@ plot_baf <- function(p_dat, p_source, incl_binom = TRUE,
   p
 }
 
-# plot
+# plot all chromosomes
 p <- plot_baf(geno, "caveman_snps")
 ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_w_binom_plot.png"), width = 5000, height = 1200, res = 300)
 print(p)
@@ -129,14 +130,18 @@ ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_plot.png"), width = 5000, heigh
 print(p)
 dev.off()
 
-for (chr_i in c("1", "9")) {
-  p <- plot_baf(geno %>% dplyr::filter(chr == chr_i), "caveman_snps", p_alpha = 0.2, p_size = 0.8)
-  ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_w_binom_plot.png"), width = 5000, height = 1200, res = 300)
-  print(p)
-  dev.off()
+# plot chromosomes of interest, zoomed in
+if (!is.null(opts$baf_chrs)) {
+  baf_chrs <- unlist(strsplit(opts$baf_chrs, ","))
+  for (chr_i in baf_chrs) {
+    p <- plot_baf(geno %>% dplyr::filter(chr == chr_i), "caveman_snps", p_alpha = 0.2, p_size = 0.8)
+    ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_w_binom_plot.png"), width = 5000, height = 1200, res = 300)
+    print(p)
+    dev.off()
 
-  p <- plot_baf(geno %>% dplyr::filter(chr == chr_i), "caveman_snps", incl_binom = FALSE, p_alpha = 0.2, p_size = 0.8)
-  ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_plot.png"), width = 5000, height = 1200, res = 300)
-  print(p)
-  dev.off()
+    p <- plot_baf(geno %>% dplyr::filter(chr == chr_i), "caveman_snps", incl_binom = FALSE, p_alpha = 0.2, p_size = 0.8)
+    ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_plot.png"), width = 5000, height = 1200, res = 300)
+    print(p)
+    dev.off()
+  }
 }

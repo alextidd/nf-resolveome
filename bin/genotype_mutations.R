@@ -47,8 +47,8 @@ geno <-
 
     # count all reads at site
     total_depth <- sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t",
-                                  "DEL", "INS", "del", "ins")],
-                        na.rm = TRUE)
+                                 "DEL", "INS", "del", "ins")],
+                       na.rm = TRUE)
 
     # count ref reads at site
     # take first character (in case it is a deletion)

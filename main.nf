@@ -9,8 +9,6 @@ nextflow.enable.dsl=2
 include { get_irods_bam        } from './modules/local/get_irods_bam'
 include { get_local_bam        } from './modules/local/get_local_bam'
 include { samtools_index       } from './modules/local/samtools_index'
-include { get_gene_coords      } from './modules/local/get_gene_coords'
-include { get_gene_cov         } from './modules/local/get_gene_cov'
 include { concat_gene_cov      } from './modules/local/concat_gene_cov'
 include { annotate_mutations   } from './modules/local/annotate_mutations'
 include { genotype_mutations; genotype_mutations as genotype_snps } from './modules/local/genotype_mutations'
@@ -94,14 +92,6 @@ workflow {
   bait_set_vdj2 = file(params.bait_set_vdj, checkIfExists: true)
   plot_vdj_cov(MOSDEPTH_VDJ.out.regions_bed, bait_set_vdj2)
 
-  // get gene coords
-  ch_gene = Channel.fromPath(params.genes, checkIfExists: true).splitText().map{it -> it.trim()}
-  get_gene_coords(ch_gene)
-
-  // get gene coverage
-  get_gene_cov(MOSDEPTH.out.per_base_bed.combine(get_gene_coords.out))
-  concat_gene_cov(get_gene_cov.out.groupTuple())
-
   // genotype mutations
   genotype_mutations(samtools_index.out.join(ch_mutations))
 
@@ -128,17 +118,19 @@ workflow {
   plot_baf(concat_snps_per_cell.out)
 
   // generate report
-  plot_baf.out.out \
-  .join(concat_gene_cov.out)
-  .join(MOSDEPTH.out.summary_txt) \
-  .join(MOSDEPTH.out.global_txt) \
-  .join(MOSDEPTH.out.regions_txt) \
-  | map { meta, geno, gene_covs, summary_txt, global_txt, regions_txt ->
-          [meta.subMap(['donor_id']),
-            meta.id, geno, gene_covs, summary_txt, global_txt, regions_txt]
+  if (params.knit_report) {
+    plot_baf.out \
+    .join(plot_vdj_cov.out) \
+    .join(MOSDEPTH.out.summary_txt) \
+    .join(MOSDEPTH.out.global_txt) \
+    .join(MOSDEPTH.out.regions_txt) \
+    | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
+            [meta.subMap(['donor_id']),
+              meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
+    }
+    | groupTuple()
+    | set { report_input }
+    report(rmd, report_input)
   }
-  | groupTuple()
-  | set { report_input }
-  report(rmd, report_input)
   
 }
