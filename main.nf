@@ -11,8 +11,9 @@ include { get_local_bam        } from './modules/local/get_local_bam'
 include { samtools_index       } from './modules/local/samtools_index'
 include { concat_gene_cov      } from './modules/local/concat_gene_cov'
 include { annotate_mutations   } from './modules/local/annotate_mutations'
+include { bedtools_intersect_snps } from './modules/local/bedtools_intersect_snps'
 include { genotype_mutations; genotype_mutations as genotype_snps } from './modules/local/genotype_mutations'
-include { concat_mutations; concat_mutations as concat_snps  } from './modules/local/concat_mutations'
+include { concat_mutations; concat_mutations as concat_snps } from './modules/local/concat_mutations'
 include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
 include { generate_nr_nv       } from './modules/local/generate_nr_nv'
 include { plot_baf             } from './modules/local/plot_baf'
@@ -55,7 +56,12 @@ workflow {
     .splitCsv(header: true)
     | map { row ->
             def meta = [donor_id: row.donor_id, id: row.id]
-            [meta, "snps", file(row.snps, checkIfExists: true)]
+            [meta, "snps", row.snps]
+    }
+    | branch { meta, set, snps ->
+      // branch cells/donors without SNPs available
+      no_snps: snps == "NA"
+      snps: snps != "NA"
     }
     | set { ch_snps }
   
@@ -103,8 +109,16 @@ workflow {
   concat_mutations(ch_all_genos)
   annotate_mutations(concat_mutations.out, refcds)
 
+  // if seq_type = dnahyb, subset snps to those in the panel
+  bait_set_hyb2 = file(params.bait_set_hyb, checkIfExists: true)
+  if (params.seq_type == "dnahyb") {
+    ch_snps2 = bedtools_intersect_snps(ch_snps.snps, bait_set_hyb2)
+  } else {
+    ch_snps2 = ch_snps.snps
+  }
+
   // genotype SNPs in chunks of 100,000
-  ch_snps_split = ch_snps.splitText(by: 100000, file: true, keepHeader: true)
+  ch_snps_split = ch_snps2.splitText(by: 100000, file: true, keepHeader: true)
   ch_bams_x_snps = samtools_index.out.combine(ch_snps_split, by: 0)
   genotype_snps(ch_bams_x_snps)
   concat_snps_per_cell(genotype_snps.out.groupTuple(by: [0, 1]))

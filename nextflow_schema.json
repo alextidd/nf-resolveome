@@ -54,13 +54,18 @@
       "type": "boolean",
       "description": "Annotate the genes and impacts of mutations using dndscv?"
     },
-    "bait_set_hyb": {
+    "seq_type": {
       "type": "string",
-      "description": "A bed file of the bait set used for hybridisation."
+      "default": "dna",
+      "enum": ["dna", "dnahyb"]
     },
     "bait_set_vdj": {
       "type": "string",
       "description": "A bed file of the VDJ regions of interest."
+    },
+    "bait_set_hyb": {
+      "type": "string",
+      "description": "A bed file of the bait set used for hybridisation."
     },
     "baf_chrs": {
       "type": "string",

@@ -11,7 +11,7 @@ process concat_snps_per_cell {
 
   script:
   """
-  head -1 ${genos[0]} > ${meta.id}_genotyped_snps.tsv
+  head -1  \$(ls ${genos} | head -1) > ${meta.id}_genotyped_snps.tsv
   for file in ${genos} ; do
     sed 1d \$file >> ${meta.id}_genotyped_snps.tsv
   done
