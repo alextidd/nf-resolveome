@@ -17,6 +17,8 @@ include { concat_mutations; concat_mutations as concat_snps } from './modules/lo
 include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
 include { generate_nr_nv       } from './modules/local/generate_nr_nv'
 include { plot_baf             } from './modules/local/plot_baf'
+include { knit_baf_plots       } from './modules/local/knit_baf_plots'
+include { merge_baf_plots      } from './modules/local/merge_baf_plots'
 include { report               } from './modules/local/report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
@@ -58,13 +60,10 @@ workflow {
             def meta = [donor_id: row.donor_id, id: row.id]
             [meta, "snps", row.snps]
     }
-    | branch { meta, set, snps ->
-      // branch cells/donors without SNPs available
-      no_snps: snps == "NA"
-      snps: snps != "NA"
-    }
+    | filter { it[2] != "NA" }
+    | map { meta, set, snps -> [meta, set, file(snps, checkIfExists: true)] }
     | set { ch_snps }
-  
+
   // get refcds file
   refcds = file(params.refcds, checkIfExists: true)
 
@@ -112,9 +111,9 @@ workflow {
   // if seq_type = dnahyb, subset snps to those in the panel
   bait_set_hyb2 = file(params.bait_set_hyb, checkIfExists: true)
   if (params.seq_type == "dnahyb") {
-    ch_snps2 = bedtools_intersect_snps(ch_snps.snps, bait_set_hyb2)
+    ch_snps2 = bedtools_intersect_snps(ch_snps, bait_set_hyb2)
   } else {
-    ch_snps2 = ch_snps.snps
+    ch_snps2 = ch_snps
   }
 
   // genotype SNPs in chunks of 100,000
@@ -131,19 +130,34 @@ workflow {
   // plot BAF from genotyped SNPs
   plot_baf(concat_snps_per_cell.out)
 
+  // knit BAF plots
+  baf_rmd = file("${baseDir}/bin/baf_plots.Rmd")
+  knit_baf_plots(plot_baf.out)
+  knit_baf_plots.out
+    | map { meta, baf_plots, baf_rmds  ->
+            return [meta.subMap(['donor_id']), baf_plots, baf_rmds]
+    }
+    | groupTuple()
+    | map { meta, baf_plots, baf_rmds ->
+            def flat_baf_plots = baf_plots.flatten()
+            return [meta, flat_baf_plots, baf_rmds]
+    }
+    | set { merge_baf_plots_input }
+  merge_baf_plots(baf_rmd, merge_baf_plots_input)
+  
   // generate report
   if (params.knit_report) {
     plot_baf.out \
-    .join(plot_vdj_cov.out) \
-    .join(MOSDEPTH.out.summary_txt) \
-    .join(MOSDEPTH.out.global_txt) \
-    .join(MOSDEPTH.out.regions_txt) \
-    | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
-            [meta.subMap(['donor_id']),
-              meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
-    }
-    | groupTuple()
-    | set { report_input }
+      .join(plot_vdj_cov.out) \
+      .join(MOSDEPTH.out.summary_txt) \
+      .join(MOSDEPTH.out.global_txt) \
+      .join(MOSDEPTH.out.regions_txt) \
+      | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
+              [meta.subMap(['donor_id']),
+                meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
+      }
+      | groupTuple()
+      | set { report_input }
     report(rmd, report_input)
   }
   

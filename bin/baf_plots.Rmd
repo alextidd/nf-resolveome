@@ -1,0 +1,21 @@
+---
+title: "BAF plots"
+output:
+  html_document:
+    fig_width: 8
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 4
+    theme: lumen
+params: 
+  donor_id: null
+  baf_rmds: null
+---
+
+```{r echo = FALSE, results = 'asis'}
+cat("# ", params$donor_id, "\n\n")
+```
+
+```{r, child = params$baf_rmds}
+```
