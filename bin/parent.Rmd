@@ -1,5 +1,4 @@
 ---
-title: "BAF plots"
 output:
   html_document:
     fig_width: 8
@@ -8,14 +7,19 @@ output:
     toc_collapsed: true
     toc_depth: 4
     theme: lumen
-params: 
+params:
+  title: null
   donor_id: null
-  baf_rmds: null
+  rmds: null
+---
+
+---
+title: `r params$title`
 ---
 
 ```{r echo = FALSE, results = 'asis'}
 cat("# ", params$donor_id, "\n\n")
 ```
 
-```{r, child = params$baf_rmds}
+```{r, child = params$rmds}
 ```

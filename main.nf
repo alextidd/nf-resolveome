@@ -17,8 +17,8 @@ include { concat_mutations; concat_mutations as concat_snps } from './modules/lo
 include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
 include { generate_nr_nv       } from './modules/local/generate_nr_nv'
 include { plot_baf             } from './modules/local/plot_baf'
-include { knit_baf_plots       } from './modules/local/knit_baf_plots'
-include { merge_baf_plots      } from './modules/local/merge_baf_plots'
+include { knit_plots as knit_baf; knit_plots as knit_vdj } from './modules/local/knit_plots'
+include { merge_plots as merge_baf; merge_plots as merge_vdj } from './modules/local/merge_plots'
 include { report               } from './modules/local/report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
@@ -67,8 +67,11 @@ workflow {
   // get refcds file
   refcds = file(params.refcds, checkIfExists: true)
 
-  // get rmd file
-  rmd = file("${baseDir}/bin/report.Rmd")
+  // get report rmd file
+  report_rmd = file("${baseDir}/bin/report.Rmd")
+
+  // get parent rmd file
+  parent_rmd = file("${baseDir}/bin/parent.Rmd")
 
   // initialize fasta file with meta map
   fasta = params.fasta ? Channel.fromPath(params.fasta).map{ it -> [ [id:it.baseName], it ] }.collect() : Channel.empty()
@@ -96,6 +99,20 @@ workflow {
   // plot VDJ coverage
   bait_set_vdj2 = file(params.bait_set_vdj, checkIfExists: true)
   plot_vdj_cov(MOSDEPTH_VDJ.out.regions_bed, bait_set_vdj2)
+
+  // knit VDJ coverage plots
+  knit_vdj(plot_vdj_cov.out)
+  knit_vdj.out
+    | map { meta, vdj_plots, rmds  ->
+            return [meta.subMap(['donor_id']), vdj_plots, rmds]
+    }
+    | groupTuple()
+    | map { meta, vdj_plots, rmds ->
+            def flat_vdj_plots = vdj_plots.flatten()
+            return [meta, flat_vdj_plots, rmds]
+    }
+    | set { merge_vdj_input }
+  merge_vdj(parent_rmd, merge_vdj_input, "VDJ coverage", "vdj_cov")
 
   // genotype mutations
   genotype_mutations(samtools_index.out.join(ch_mutations))
@@ -130,20 +147,19 @@ workflow {
   // plot BAF from genotyped SNPs
   plot_baf(concat_snps_per_cell.out)
 
-  // knit BAF plots
-  baf_rmd = file("${baseDir}/bin/baf_plots.Rmd")
-  knit_baf_plots(plot_baf.out)
-  knit_baf_plots.out
-    | map { meta, baf_plots, baf_rmds  ->
-            return [meta.subMap(['donor_id']), baf_plots, baf_rmds]
+  // knit and merge BAF plots
+  knit_baf(plot_baf.out)
+  knit_baf.out
+    | map { meta, baf_plots, rmds  ->
+            return [meta.subMap(['donor_id']), baf_plots, rmds]
     }
     | groupTuple()
-    | map { meta, baf_plots, baf_rmds ->
+    | map { meta, baf_plots, rmds ->
             def flat_baf_plots = baf_plots.flatten()
-            return [meta, flat_baf_plots, baf_rmds]
+            return [meta, flat_baf_plots, rmds]
     }
-    | set { merge_baf_plots_input }
-  merge_baf_plots(baf_rmd, merge_baf_plots_input)
+    | set { merge_baf_input }
+  merge_baf(parent_rmd, merge_baf_input, "BAF plots", "genotyping/snps")
   
   // generate report
   if (params.knit_report) {
@@ -158,7 +174,7 @@ workflow {
       }
       | groupTuple()
       | set { report_input }
-    report(rmd, report_input)
+    report(report_rmd, report_input)
   }
   
 }
