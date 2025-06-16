@@ -69,7 +69,7 @@ geno <-
     tibble::tibble(chr = chr, pos = pos, ref = ref, alt = alt,
                    total_depth = total_depth, ref_depth = ref_depth,
                    mut_depth = mut_depth) %>%
-      dplyr::mutate(mut_vaf = mut_depth / ref_depth)
+      dplyr::mutate(mut_vaf = mut_depth / (mut_depth + ref_depth))
   }) %>%
   dplyr::bind_rows()
 
