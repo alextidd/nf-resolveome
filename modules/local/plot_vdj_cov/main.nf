@@ -2,7 +2,7 @@
 process plot_vdj_cov {
   tag "${meta.id}"
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/vdj_cov/",
+  publishDir "${params.out_dir}/${meta.donor_id}/cells/${meta.id}/vdj_cov/",
     mode: "copy"
   
   input:

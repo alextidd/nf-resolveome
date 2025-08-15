@@ -2,7 +2,7 @@
 process plot_baf {
   tag "${meta.id}"
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${meta.id}/genotyping/${set}/",
+  publishDir "${params.out_dir}/${meta.donor_id}/cells/${meta.id}/genotyping/${set}/",
     mode: "copy"
   
   input:
