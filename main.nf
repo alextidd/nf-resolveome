@@ -145,7 +145,7 @@ workflow {
   concat_snps(ch_all_snps)
 
   // plot BAF from genotyped SNPs
-  plot_baf(concat_snps_per_cell.out)
+  plot_baf(concat_snps_per_cell.out, refcds)
 
   // knit and merge BAF plots
   knit_baf(plot_baf.out)

@@ -8,7 +8,9 @@ library(ggplot2)
 # options
 option_list <- list(make_option("--geno", type = "character"),
                     make_option("--id", type = "character"),
-                    make_option("--baf_chrs", type = "character"))
+                    make_option("--baf_chrs", type = "character"),
+                    make_option("--baf_genes", type = "character"),
+                    make_option("--refcds", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
@@ -17,8 +19,31 @@ saveRDS(opts, "opts.rds")
 # read geno
 geno <- readr::read_tsv(opts$geno)
 
+# get baf genes coordinates
+if (!is.null(opts$baf_genes)) {
+  baf_genes <- unlist(strsplit(opts$baf_genes, ","))
+
+  # read refcds
+  load(opts$refcds)
+
+  # get gene coordinates
+  p_genes <-
+    baf_genes %>%
+    purrr::set_names() %>%
+    purrr::map(function(g) {
+      i <- RefCDS[[which(purrr::map_lgl(RefCDS, ~ .x$gene_name == g))]]
+      tibble::tibble(chr = i$chr,
+                     pos = (min(i$intervals_cds) + max(i$intervals_cds)) / 2)
+    }) %>%
+    dplyr::bind_rows(.id = "gene")
+
+} else {
+  p_genes <- NULL
+}
+
 # function: plot BAF
-plot_baf <- function(p_dat, p_source, p_alpha = 0.05, p_size = 0.01) {
+plot_baf <- function(p_dat, p_source, p_genes = NULL,
+                     p_alpha = 0.05, p_size = 0.01) {
   # prep data
   p_dat2 <-
     p_dat %>%
@@ -55,16 +80,24 @@ plot_baf <- function(p_dat, p_source, p_alpha = 0.05, p_size = 0.01) {
                                       linewidth = 0),
           strip.background = element_rect(color = "grey", fill = NA,
                                           linewidth = 0, linetype = "solid"),
-          axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-          legend.position = "none") +
+          axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
     labs(title = paste(opts$id, "-", p_source))
+
+  # add baf genes
+  if (!is.null(p_genes)) {
+    p <-
+      p +
+      geom_vline(
+        data = p_genes %>% dplyr::mutate(chr = factor(chr, levels = levels(p_dat2$chr))),
+        aes(xintercept = pos, colour = gene))
+  }
 
   # return
   p
 }
 
 # plot all chromosomes
-p <- plot_baf(geno, "caveman_snps")
+p <- plot_baf(geno, "caveman_snps", p_genes = p_genes)
 ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_plot.png"), width = 5000, height = 1200, res = 300)
 print(p)
 dev.off()
@@ -73,7 +106,12 @@ dev.off()
 if (!is.null(opts$baf_chrs)) {
   baf_chrs <- unlist(strsplit(opts$baf_chrs, ","))
   for (chr_i in baf_chrs) {
-    p <- plot_baf(geno %>% dplyr::filter(chr == chr_i), "caveman_snps", p_alpha = 0.2, p_size = 0.8)
+    p <-
+      geno %>%
+      dplyr::filter(chr == chr_i) %>%
+      plot_baf(p_source = "caveman_snps",
+               p_genes = p_genes %>% dplyr::filter(chr == chr_i),
+               p_alpha = 0.2, p_size = 0.8)
     ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_plot.png"), width = 5000, height = 1200, res = 300)
     print(p)
     dev.off()

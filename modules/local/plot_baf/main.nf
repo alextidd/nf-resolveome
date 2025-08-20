@@ -7,16 +7,20 @@ process plot_baf {
   
   input:
   tuple val(meta), val(set), path(geno)
+  path refcds
 
   output:
   tuple val(meta), path("${meta.id}_*_plot.png")
 
   script:
   def arg_baf_chrs = params.baf_chrs ? "--baf_chrs " + params.baf_chrs : ""
+  def arg_baf_genes = params.baf_genes ? "--baf_genes " + params.baf_genes : ""
   """
   plot_baf.R \\
     --geno ${geno} \\
     --id ${meta.id} \\
-    ${arg_baf_chrs}
+    --refcds ${refcds} \\
+    ${arg_baf_chrs} \\
+    ${arg_baf_genes}
   """
 }
