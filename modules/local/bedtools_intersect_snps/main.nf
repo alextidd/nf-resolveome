@@ -48,7 +48,7 @@ process bedtools_intersect_snps {
 
   head -1 snps.bed > snps_intersected.tsv.tmp
 
-  bedtools intersect -a <(sed 1d snps.bed) -b ${bait_set_hyb} -wa -wb \\
+  bedtools intersect -a <(sed 1d snps.bed) -b ${bait_set_hyb} -wa \\
     >> snps_intersected.tsv.tmp
   
   cut -f1,3- snps_intersected.tsv.tmp > snps_intersected.tsv

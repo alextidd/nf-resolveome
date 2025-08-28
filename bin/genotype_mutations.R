@@ -39,37 +39,45 @@ geno <-
   muts %>%
   dplyr::distinct(chr, pos, ref, alt, type) %>%
   purrr::pmap(function(chr, pos, ref, alt, type) {
+
     paste(chr, pos, ref, alt, type, "\n") %>% cat()
 
-    # query bam
-    calls <- deepSNV::bam2R(opts$bam, chr, pos, pos, q = opts$min_bq,
-                            mask = opts$mask, mq = opts$min_mq)
-
-    # count all reads at site
-    total_depth <- sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t",
-                                 "DEL", "INS", "del", "ins")],
-                       na.rm = TRUE)
-
-    # count ref reads at site
-    # take first character (in case it is a deletion)
-    ref_1 <- substr(ref, 1, 1)
-    ref_depth <- sum(calls[, c(ref_1, tolower(ref_1))], na.rm = TRUE)
-
-    # count mutant reads at site
-    if (type %in% c("snv", "dnv", "mnv")) {
-      # count mutant reads at site
-      mut_depth <- sum(calls[, c(alt, tolower(alt))], na.rm = TRUE)
-    } else if (type %in% c("ins", "del")) {
-      # count ins or del reads at site (don't check sequence)
-      mut_depth <- sum(calls[, c(type, toupper(type))], na.rm = TRUE)
-    } else {
-      stop("alt type not recognised!")
+    # check type
+    if (!(type %in% c("snv", "dnv", "mnv", "ins", "del"))) {
+      stop(paste("mutation type", type, "not recognized!"))
     }
 
+    # look ahead if deletion
+    if (type == "del") {
+      pos_i <- pos + 1
+    } else {
+      pos_i <- pos
+    }
+
+    # query bam
+    calls <- deepSNV::bam2R(bam, chr, pos_i, pos_i, mask = opts$mask,
+                            q = opts$min_bq, mq = opts$min_mq)
+
+    # calculate total depth
+		total_depth <-
+      sum(calls[, c("A", "C", "G", "T", "a", "c", "g", "t", "-", "_")],
+          na.rm = TRUE)
+
+    # calculate mut depth
+		if (type == "del") {
+		  mut_depth <- sum(calls[, c("-", "_")])
+		} else if(type == "ins") {
+			mut_depth <- sum(calls[, c("INS", "ins")])
+		} else {
+			mut_i <- unlist(strsplit(alt, ""))[1]
+			mut_depth <- calls[1, mut_i] + calls[1, tolower(mut_i)]
+		}
+
+    # return
     tibble::tibble(chr = chr, pos = pos, ref = ref, alt = alt,
-                   total_depth = total_depth, ref_depth = ref_depth,
-                   mut_depth = mut_depth) %>%
-      dplyr::mutate(mut_vaf = mut_depth / (mut_depth + ref_depth))
+                   total_depth = total_depth, mut_depth = mut_depth) %>%
+      dplyr::mutate(mut_vaf = mut_depth / total_depth)
+
   }) %>%
   dplyr::bind_rows()
 
