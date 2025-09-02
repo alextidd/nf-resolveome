@@ -94,21 +94,21 @@ dat[c("global_txt", "regions_txt")] %>%
 ```{r vaf_dist}
 # function: plot vaf distribution
 plot_vaf_dist <- function(p_dat) {
-  mut_depth_bins <- c("0", "1", ">1", ">5", ">10", ">50")
+  alt_depth_bins <- c("0", "1", ">1", ">5", ">10", ">50")
   p_dat2 <-
     p_dat %>%
-    mutate(mut_vaf = mut_depth / total_depth,
-           mut_depth_bin = case_when(mut_depth > 50 ~ ">50",
-                                     mut_depth > 10 ~ ">10",
-                                     mut_depth > 5 ~ ">5",
-                                     mut_depth > 1 ~ ">1",
-                                     mut_depth == 1 ~ "1",
-                                     mut_depth == 0 ~ "0") %>%
-             factor(levels = mut_depth_bins))
+    mutate(alt_vaf = alt_depth / total_depth,
+           alt_depth_bin = case_when(alt_depth > 50 ~ ">50",
+                                     alt_depth > 10 ~ ">10",
+                                     alt_depth > 5 ~ ">5",
+                                     alt_depth > 1 ~ ">1",
+                                     alt_depth == 1 ~ "1",
+                                     alt_depth == 0 ~ "0") %>%
+             factor(levels = alt_depth_bins))
   p_dat2 %>%
-    ggplot(aes(x = mut_vaf, fill = mut_depth_bin, colour = mut_depth_bin)) +
+    ggplot(aes(x = alt_vaf, fill = alt_depth_bin, colour = alt_depth_bin)) +
     geom_histogram(bins = 100) +
-    geom_vline(xintercept = median(p_dat2$mut_vaf, na.rm = TRUE),
+    geom_vline(xintercept = median(p_dat2$alt_vaf, na.rm = TRUE),
                linetype = "dashed") +
     theme_minimal() +
     viridis::scale_fill_viridis(discrete = TRUE) +
@@ -127,7 +127,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   # plot non-zero VAF distribution
   p <-
     p_dat %>%
-    filter(mut_depth > 0) %>%
+    filter(alt_depth > 0) %>%
     plot_vaf_dist() +
     ggtitle(paste(p_source, "- Distribution of non-zero VAFs"))
   print(p)
@@ -135,7 +135,7 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   # plot VAF distribution per id
   p <-
     p_dat %>%
-    ggplot(aes(x = mut_vaf, colour = id)) +
+    ggplot(aes(x = alt_vaf, colour = id)) +
     geom_density() +
     ggtitle(paste(p_source, "- Distribution of VAFs per cell")) +
     theme_minimal() +
@@ -144,12 +144,12 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
 
   # plot VAF distribution with increasing alt depth
   seq(1, 10) %>%
-    purrr::walk(function(min_mut_depth) {
+    purrr::walk(function(min_alt_depth) {
       p <-
         p_dat %>%
-        filter(mut_depth >= min_mut_depth) %>%
+        filter(alt_depth >= min_alt_depth) %>%
         plot_vaf_dist() +
-        ggtitle(paste(p_source, "- Distribution of VAFs, min", min_mut_depth,
+        ggtitle(paste(p_source, "- Distribution of VAFs, min", min_alt_depth,
                       "alt depth"))
       print(p)
     })
@@ -165,17 +165,17 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
   # prepare data
   p_dat2 <-
     p_dat %>%
-    mutate(mut_id = paste(chr, pos, ref, alt, sep = "_")) %>%
+    mutate(alt_id = paste(chr, pos, ref, alt, sep = "_")) %>%
     # count number of cells with each mutation
-    add_count(mut_id, name = "n_cells_w_mut")
+    add_count(alt_id, name = "n_cells_w_mut")
 
   # reshape data for heatmap
   heatmap_data <-
     p_dat2 %>%
-    reshape2::dcast(mut_id + n_cells_w_mut ~ id, value.var = "mut_vaf")
-  rownames(heatmap_data) <- heatmap_data$mut_id
+    reshape2::dcast(alt_id + n_cells_w_mut ~ id, value.var = "alt_vaf")
+  rownames(heatmap_data) <- heatmap_data$alt_id
   heatmap_matrix <- as.matrix(heatmap_data[, -c(1:3)]) # drop annotations
-  n_total_muts <- n_distinct(p_dat2$mut_id)
+  n_total_muts <- n_distinct(p_dat2$alt_id)
   n_total_cells <- n_distinct(p_dat2$id)
 
   # calculate the number of mutations per column (id)
@@ -189,7 +189,7 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
 
   # prepare annotations for columns
   annotation_row <- data.frame(n_cells_w_mut = heatmap_data$n_cells_w_mut)
-  rownames(annotation_row) <- heatmap_data$mut_id
+  rownames(annotation_row) <- heatmap_data$alt_id
 
   # plot
   pheatmap::pheatmap(
@@ -208,12 +208,12 @@ plot_vaf_heatmap <- function(p_dat, p_source) {
 purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   p <-
     p_dat %>%
-    filter(mut_depth > 5, mut_vaf > 0.1) %>%
+    filter(alt_depth > 5, alt_vaf > 0.1) %>%
     plot_vaf_heatmap(p_source)
   print(p)
   p <-
     p_dat %>%
-    filter(mut_depth > 5, mut_vaf > 0.1, !is.na(gene)) %>%
+    filter(alt_depth > 5, alt_vaf > 0.1, !is.na(gene)) %>%
     plot_vaf_heatmap(paste(p_source, "(coding muts only)"))
   print(p)
 })
@@ -227,14 +227,14 @@ purrr::walk2(names(dat$geno), dat$geno, function(p_source, p_dat) {
   purrr::walk2(names(p_dat_by_id), p_dat_by_id, function(p_id, p_dat2) {
     p <-
       p_dat2 %>%
-      select(id, chr, pos, mut_vaf) %>%
-      mutate(mut_baf = 1 - mut_vaf,
+      select(id, chr, pos, alt_vaf) %>%
+      mutate(alt_baf = 1 - alt_vaf,
                     chr = factor(sub("^chr", "", chr), levels = c(as.character(1:22), "X", "Y"))) %>%
       arrange(chr, pos) %>%
       group_by(chr) %>%
       mutate(chr_alternating = cur_group_id() %% 2,
                     min_pos = min(pos), max_pos = max(pos)) %>%
-      tidyr::pivot_longer(cols = c("mut_vaf", "mut_baf"), names_to = "vaf_type") %>%
+      tidyr::pivot_longer(cols = c("alt_vaf", "alt_baf"), names_to = "vaf_type") %>%
       ggplot(aes(x = pos, y = value)) +
       geom_rect(aes(ymin = 0, ymax = 1, xmin = min_pos, xmax = max_pos,
                     fill = as.factor(chr_alternating))) +

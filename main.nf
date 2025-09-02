@@ -38,7 +38,7 @@ workflow {
     .splitCsv(header: true)
     | map { row ->
             def meta = [donor_id: row.donor_id, id: row.id]
-            [meta, file(row.bam)]
+            [meta, file(row.bam, checkIfExists: params.location == "local")]
     }
     | set { ch_bam }
 
