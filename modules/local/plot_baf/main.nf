@@ -4,6 +4,7 @@ process plot_baf {
   label 'normal10gb'
   publishDir "${params.out_dir}/${meta.donor_id}/cells/${meta.id}/genotyping/${set}/",
     mode: "copy"
+  errorStrategy 'ignore'
   
   input:
   tuple val(meta), val(set), path(geno)

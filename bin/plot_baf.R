@@ -20,8 +20,11 @@ saveRDS(opts, "opts.rds")
 geno <- readr::read_tsv(opts$geno)
 
 # get baf genes
-genes <- ifelse(is.null(opts$baf_genes), NULL,
-                unlist(strsplit(opts$baf_genes, ",")))
+genes <- if (is.null(opts$baf_genes)) {
+  NULL
+} else {
+  unlist(strsplit(opts$baf_genes, ","))
+}
 
 # plot all chromosomes
 p <- alexr::plot_baf(geno, "caveman_snps", genes = genes)
@@ -37,8 +40,7 @@ if (!is.null(opts$baf_chrs)) {
     p <-
       geno %>%
       dplyr::filter(chr == chr_i) %>%
-      alexr::plot_baf(p_source = "caveman_snps", genes = genes,
-                      p_alpha = 0.2, p_size = 0.8)
+      alexr::plot_baf(genes = genes, p_alpha = 0.2, p_size = 0.8)
     ragg::agg_png(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_plot.png"),
                   width = 5000, height = 1200, res = 300)
     print(p)

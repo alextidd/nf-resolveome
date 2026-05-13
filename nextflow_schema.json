@@ -71,14 +71,28 @@
       "type": "string",
       "description": "Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3)."
     },
+    "baf_genes": {
+      "type": "string",
+      "description": "Any genes of interest to mark when making the BAF plots, delimited with a comma (e.g. BRCA1,BRCA2)."
+    },
     "refcds": {
       "type": "string",
-      "default": "/lustre/scratch125/casm/team268im/at31/reference/dndscv/refcds_hg19.rda",
+      "default": "/nfs/casm/team268im/at31/reference/dndscv/refcds_hg19.rda",
       "description": "Path to RefCDS Rda object from the dndscv package."
     },
     "knit_report": {
       "type": "boolean",
       "description": "Knit the report?"
+    },
+    "run_snps": {
+      "type": "boolean",
+      "default": true,
+      "description": "Genotype SNPs and plot the BAFs?"
+    },
+    "run_mutations": {
+      "type": "boolean",
+      "default": true,
+      "description": "Genotype mutations?"
     },
     "publish_dir_mode": {
       "type": "string",

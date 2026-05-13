@@ -33,7 +33,7 @@ workflow {
   log.info paramsSummaryLog(workflow)
 
   // get input bams
-  Channel
+  channel
     .fromPath(params.samplesheet)
     .splitCsv(header: true)
     | map { row ->
@@ -43,26 +43,29 @@ workflow {
     | set { ch_bam }
 
   // get input mutations
-  Channel
-    .fromPath(params.samplesheet)
-    .splitCsv(header: true)
-    | map { row ->
-            def meta = [donor_id: row.donor_id, id: row.id]
-            [meta, "mutations", file(row.mutations, checkIfExists: true)]
-    }
-    | set { ch_mutations }
+  if (params.run_mutations) {
+    channel
+      .fromPath(params.samplesheet)
+      .splitCsv(header: true)
+      | map { row ->
+              def meta = [donor_id: row.donor_id, id: row.id]
+              [meta, "mutations", file(row.mutations, checkIfExists: true)] }
+      | set { ch_mutations }
+  }
   
   // get input SNPs
-  Channel
-    .fromPath(params.samplesheet)
-    .splitCsv(header: true)
-    | map { row ->
-            def meta = [donor_id: row.donor_id, id: row.id]
-            [meta, "snps", row.snps]
-    }
-    | filter { it[2] != "NA" }
-    | map { meta, set, snps -> [meta, set, file(snps, checkIfExists: true)] }
-    | set { ch_snps }
+  if (params.run_snps) {
+    channel
+      .fromPath(params.samplesheet)
+      .splitCsv(header: true)
+      | map { row ->
+              def meta = [donor_id: row.donor_id, id: row.id]
+              [meta, "snps", row.snps]
+      }
+      | filter { it[2] != "NA" }
+      | map { meta, set, snps -> [meta, set, file(snps, checkIfExists: true)] }
+      | set { ch_snps }
+  }
 
   // get refcds file
   refcds = file(params.refcds, checkIfExists: true)
@@ -74,7 +77,7 @@ workflow {
   parent_rmd = file("${baseDir}/bin/parent.Rmd")
 
   // initialize fasta file with meta map
-  fasta = params.fasta ? Channel.fromPath(params.fasta).map{ it -> [ [id:it.baseName], it ] }.collect() : Channel.empty()
+  fasta = params.fasta ? channel.fromPath(params.fasta).map{ it -> [ [id:it.baseName], it ] }.collect() : channel.empty()
 
   // stage bams
   if (params.location == "irods") {
@@ -89,11 +92,11 @@ workflow {
   samtools_index(ch_bam2)
 
   // get genome-wide and immune panel coverage
-  bait_set_hyb = Channel.fromPath(params.bait_set_hyb, checkIfExists: true)
+  bait_set_hyb = channel.fromPath(params.bait_set_hyb, checkIfExists: true)
   MOSDEPTH(samtools_index.out.combine(bait_set_hyb), fasta)
 
   // get VDJ coverage
-  bait_set_vdj = Channel.fromPath(params.bait_set_vdj, checkIfExists: true)
+  bait_set_vdj = channel.fromPath(params.bait_set_vdj, checkIfExists: true)
   MOSDEPTH_VDJ(samtools_index.out.combine(bait_set_vdj), fasta)
 
   // plot VDJ coverage
@@ -115,66 +118,71 @@ workflow {
   merge_vdj(parent_rmd, merge_vdj_input, "VDJ coverage", "vdj_cov")
 
   // genotype mutations
-  genotype_mutations(samtools_index.out.join(ch_mutations))
-
-  // generate mutation summaries
-  genotype_mutations.out
-    | map { meta, set, geno -> [meta.subMap('donor_id'), set, geno] }
-    | groupTuple(by: [0, 1])
-    | set { ch_all_genos }
-  concat_mutations(ch_all_genos)
-  annotate_mutations(concat_mutations.out, refcds)
-
-  // if seq_type = dnahyb, subset snps to those in the panel
-  bait_set_hyb2 = file(params.bait_set_hyb, checkIfExists: true)
-  if (params.seq_type == "dnahyb") {
-    ch_snps2 = bedtools_intersect_snps(ch_snps, bait_set_hyb2)
-  } else {
-    ch_snps2 = ch_snps
+  if (params.run_mutations) {
+    genotype_mutations(samtools_index.out.join(ch_mutations))
+    genotype_mutations.out
+      | map { meta, set, geno -> [meta.subMap('donor_id'), set, geno] }
+      | groupTuple(by: [0, 1])
+      | set { ch_all_genos }
+    concat_mutations(ch_all_genos)
+    annotate_mutations(concat_mutations.out, refcds)
   }
 
-  // genotype SNPs in chunks of 100,000
-  ch_snps_split = ch_snps2.splitText(by: 100000, file: true, keepHeader: true)
-  ch_bams_x_snps = samtools_index.out.combine(ch_snps_split, by: 0)
-  genotype_snps(ch_bams_x_snps)
-  concat_snps_per_cell(genotype_snps.out.groupTuple(by: [0, 1]))
-  concat_snps_per_cell.out
-    | map { meta, set, geno -> [meta.subMap('donor_id'), set, geno] }
-    | groupTuple(by: [0, 1])
-    | set { ch_all_snps }
-  concat_snps(ch_all_snps)
+  // genotype snps and plot baf
+  if (params.run_snps) {
 
-  // plot BAF from genotyped SNPs
-  plot_baf(concat_snps_per_cell.out, refcds)
+    // if seq_type = dnahyb, subset snps to those in the panel
+    bait_set_hyb2 = file(params.bait_set_hyb, checkIfExists: true)
+    if (params.seq_type == "dnahyb") {
+      ch_snps2 = bedtools_intersect_snps(ch_snps, bait_set_hyb2)
+    } else {
+      ch_snps2 = ch_snps
+    }
 
-  // knit and merge BAF plots
-  knit_baf(plot_baf.out)
-  knit_baf.out
-    | map { meta, baf_plots, rmds  ->
-            return [meta.subMap(['donor_id']), baf_plots, rmds]
-    }
-    | groupTuple()
-    | map { meta, baf_plots, rmds ->
-            def flat_baf_plots = baf_plots.flatten()
-            return [meta, flat_baf_plots, rmds]
-    }
-    | set { merge_baf_input }
-  merge_baf(parent_rmd, merge_baf_input, "BAF plots", "genotyping/snps")
-  
-  // generate report
-  if (params.knit_report) {
-    plot_baf.out \
-      .join(plot_vdj_cov.out) \
-      .join(MOSDEPTH.out.summary_txt) \
-      .join(MOSDEPTH.out.global_txt) \
-      .join(MOSDEPTH.out.regions_txt) \
-      | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
-              [meta.subMap(['donor_id']),
-                meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
+    // genotype SNPs in chunks of 100,000
+    ch_snps_split = ch_snps2.splitText(by: 100000, file: true, keepHeader: true)
+    ch_bams_x_snps = samtools_index.out.combine(ch_snps_split, by: 0)
+    genotype_snps(ch_bams_x_snps)
+    concat_snps_per_cell(genotype_snps.out.groupTuple(by: [0, 1]))
+    concat_snps_per_cell.out
+      | map { meta, set, geno -> [meta.subMap('donor_id'), set, geno] }
+      | groupTuple(by: [0, 1])
+      | set { ch_all_snps }
+    concat_snps(ch_all_snps)
+
+    // plot BAF from genotyped SNPs
+    plot_baf(concat_snps_per_cell.out, refcds)
+
+    // knit and merge BAF plots
+    knit_baf(plot_baf.out)
+    knit_baf.out
+      | map { meta, baf_plots, rmds  ->
+              return [meta.subMap(['donor_id']), baf_plots, rmds]
       }
       | groupTuple()
-      | set { report_input }
-    report(report_rmd, report_input)
+      | map { meta, baf_plots, rmds ->
+              def flat_baf_plots = baf_plots.flatten()
+              return [meta, flat_baf_plots, rmds]
+      }
+      | set { merge_baf_input }
+    merge_baf(parent_rmd, merge_baf_input, "BAF plots", "genotyping/snps")
+    
+    // generate report
+    if (params.knit_report) {
+      plot_baf.out \
+        .join(plot_vdj_cov.out) \
+        .join(MOSDEPTH.out.summary_txt) \
+        .join(MOSDEPTH.out.global_txt) \
+        .join(MOSDEPTH.out.regions_txt) \
+        | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
+                [meta.subMap(['donor_id']),
+                  meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
+        }
+        | groupTuple()
+        | set { report_input }
+      report(report_rmd, report_input)
+    }
+
   }
   
 }
