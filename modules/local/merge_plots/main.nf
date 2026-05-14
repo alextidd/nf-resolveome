@@ -1,8 +1,8 @@
 // merge plots
 process merge_plots {
-  tag "${meta.donor_id}"
+  tag { "${meta.donor_id}" }
   label 'normal20gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/${publish_subdir}/",
+  publishDir { "${params.out_dir}/${meta.donor_id}/${publish_subdir}/" },
     mode: "copy"
   
   input:

@@ -82,16 +82,17 @@
     },
     "knit_report": {
       "type": "boolean",
+      "default": false,
       "description": "Knit the report?"
     },
     "run_snps": {
       "type": "boolean",
-      "default": true,
+      "default": false,
       "description": "Genotype SNPs and plot the BAFs?"
     },
     "run_mutations": {
       "type": "boolean",
-      "default": true,
+      "default": false,
       "description": "Genotype mutations?"
     },
     "publish_dir_mode": {

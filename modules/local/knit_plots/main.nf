@@ -1,6 +1,6 @@
 // knit plots
 process knit_plots {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   label 'normal'
   
   input:

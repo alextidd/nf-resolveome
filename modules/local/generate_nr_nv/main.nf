@@ -1,15 +1,15 @@
 // generate NR and NV matrices
 process generate_nr_nv {
-  tag "${meta.donor_id}"
+  tag { "${meta.donor_id}" }
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/genotyping/${set}/",
+  publishDir { "${params.out_dir}/${meta.donor_id}/genotyping/${set}/" },
     mode: "copy"
   
   input:
   tuple val(meta), val(set), val(ids), path(genos)
   
   output:
-  path(geno), emit: geno
+  path(genos), emit: genos
   tuple val(meta),
         path("${meta.donor_id}_NV_genotyped_mutations.tsv"),
         path("${meta.donor_id}_NR_genotyped_mutations.tsv"), emit: out

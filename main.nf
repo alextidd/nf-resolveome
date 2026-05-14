@@ -1,8 +1,5 @@
 #!/usr/bin/env nextflow
 
-// using DSL-2
-nextflow.enable.dsl=2
-
 // params set in nextflow.config
 
 // import modules
@@ -22,15 +19,8 @@ include { merge_plots as merge_baf; merge_plots as merge_vdj } from './modules/l
 include { report               } from './modules/local/report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
-include { validateParameters; paramsSummaryLog } from 'plugin/nf-schema'
 
 workflow {
-
-  // validate input parameters
-  validateParameters()
-
-  // print summary of supplied parameters
-  log.info paramsSummaryLog(workflow)
 
   // get input bams
   channel

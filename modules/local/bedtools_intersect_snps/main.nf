@@ -1,6 +1,6 @@
 // bedtools intersect of snps and bait set
 process bedtools_intersect_snps {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   label 'normal'
 
   input:

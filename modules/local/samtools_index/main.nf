@@ -1,6 +1,6 @@
 // check bam is not truncated before proceeding + index
 process samtools_index {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   label 'normal'
 
   input:

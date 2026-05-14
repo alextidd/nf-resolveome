@@ -1,6 +1,6 @@
 // download bam from irods
 process get_irods_bam {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   maxForks 10
   label 'normal4core'
 

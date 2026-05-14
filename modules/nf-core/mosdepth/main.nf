@@ -1,5 +1,5 @@
 process MOSDEPTH {
-    tag "$meta.id"
+    tag { "$meta.id" }
     label 'process_medium'
 
     // conda "${moduleDir}/environment.yml"

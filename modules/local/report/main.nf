@@ -1,9 +1,9 @@
 // report
 process report {
-  tag "${meta.donor_id}"
+  tag { "${meta.donor_id}" }
   queue "week"
   memory { 200.GB * task.attempt }
-  publishDir "${params.out_dir}/${meta.donor_id}/",
+  publishDir { "${params.out_dir}/${meta.donor_id}/" },
     mode: "copy"
   
   input:

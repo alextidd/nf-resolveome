@@ -1,6 +1,6 @@
 // concat snps per cell
 process concat_snps_per_cell {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   label 'normal10gb'
   
   input:

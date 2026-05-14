@@ -1,8 +1,8 @@
 // concat mutations
 process concat_mutations {
-  tag "${meta.donor_id}"
+  tag { "${meta.donor_id}" }
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/genotyping/${set}/",
+  publishDir { "${params.out_dir}/${meta.donor_id}/genotyping/${set}/" },
     mode: "copy"
   
   input:

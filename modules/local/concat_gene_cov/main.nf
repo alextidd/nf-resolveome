@@ -1,8 +1,8 @@
 // concat gene coverage
 process concat_gene_cov {
-  tag "${meta.id}"
+  tag { meta.id }
   label 'normal10gb'
-  publishDir "${params.out_dir}/${meta.donor_id}/cells/${meta.id}/mosdepth/",
+  publishDir { "${params.out_dir}/${meta.donor_id}/cells/${meta.id}/mosdepth/" },
     mode: "copy"
   
   input:

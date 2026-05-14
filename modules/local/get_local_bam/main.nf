@@ -1,6 +1,6 @@
 // symlink local bam
 process get_local_bam {
-  tag "${meta.id}"
+  tag { "${meta.id}" }
   maxForks 10
   label 'normal4core'
 
