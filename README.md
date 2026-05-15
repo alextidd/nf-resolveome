@@ -113,7 +113,7 @@ $ nextflow run nf-resolveome --help
 - `--bait_set_hyb`: A bed file of the bait set used for hybridisation. 
 - `--bait_set_vdj`: A bed file of the VDJ regions of interest. 
 - `--baf_chrs`: Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3). 
-- `--knit_report`: Knit the report? [default: false]
+- `--knit_qc_report`: Knit the report? [default: false]
 
 ### Reference files
 

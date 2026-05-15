@@ -80,7 +80,7 @@
       "default": "/nfs/casm/team268im/at31/reference/dndscv/refcds_hg19.rda",
       "description": "Path to RefCDS Rda object from the dndscv package."
     },
-    "knit_report": {
+    "knit_qc_report": {
       "type": "boolean",
       "default": false,
       "description": "Knit the report?"

@@ -11,7 +11,7 @@ process plot_baf {
   path refcds
 
   output:
-  tuple val(meta), path("${meta.id}_*_plot.png")
+  tuple val(meta), path("${meta.id}_*_plot.pdf"), optional: true
 
   script:
   def arg_baf_chrs = params.baf_chrs ? "--baf_chrs " + params.baf_chrs : ""

@@ -14,9 +14,8 @@ include { concat_mutations; concat_mutations as concat_snps } from './modules/lo
 include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
 include { generate_nr_nv       } from './modules/local/generate_nr_nv'
 include { plot_baf             } from './modules/local/plot_baf'
-include { knit_plots as knit_baf; knit_plots as knit_vdj } from './modules/local/knit_plots'
-include { merge_plots as merge_baf; merge_plots as merge_vdj } from './modules/local/merge_plots'
-include { report               } from './modules/local/report'
+include { merge_pdf as merge_pdf_vdj; merge_pdf as merge_pdf_baf } from './modules/local/merge_pdf'
+include { knit_qc_report       } from './modules/local/knit_qc_report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
 
@@ -63,9 +62,6 @@ workflow {
   // get report rmd file
   report_rmd = file("${baseDir}/bin/report.Rmd")
 
-  // get parent rmd file
-  parent_rmd = file("${baseDir}/bin/parent.Rmd")
-
   // initialize fasta file with meta map
   fasta = params.fasta ? channel.fromPath(params.fasta).map{ it -> [ [id:it.baseName], it ] }.collect() : channel.empty()
 
@@ -93,19 +89,15 @@ workflow {
   bait_set_vdj2 = file(params.bait_set_vdj, checkIfExists: true)
   plot_vdj_cov(MOSDEPTH_VDJ.out.regions_bed, bait_set_vdj2)
 
-  // knit VDJ coverage plots
-  knit_vdj(plot_vdj_cov.out)
-  knit_vdj.out
-    | map { meta, vdj_plots, rmds  ->
-            return [meta.subMap(['donor_id']), vdj_plots, rmds]
-    }
-    | groupTuple()
-    | map { meta, vdj_plots, rmds ->
-            def flat_vdj_plots = vdj_plots.flatten()
-            return [meta, flat_vdj_plots, rmds]
-    }
-    | set { merge_vdj_input }
-  merge_vdj(parent_rmd, merge_vdj_input, "VDJ coverage", "vdj_cov")
+  // merge VDJ coverage plots into PDF
+  merge_pdf_vdj(
+    plot_vdj_cov.out
+      .map { meta, plots -> [meta.subMap(['donor_id']), plots] }
+      .groupTuple()
+      .map { meta, plots -> [meta, plots.flatten()] },
+    "vdj_coverage_plots",
+    "vdj_cov"
+  )
 
   // genotype mutations
   if (params.run_mutations) {
@@ -118,10 +110,10 @@ workflow {
     annotate_mutations(concat_mutations.out, refcds)
   }
 
-  // genotype snps and plot baf
+  // genotype SNPs and plot BAF
   if (params.run_snps) {
 
-    // if seq_type = dnahyb, subset snps to those in the panel
+    // if seq_type = dnahyb, subset SNPs to those in the panel
     bait_set_hyb2 = file(params.bait_set_hyb, checkIfExists: true)
     if (params.seq_type == "dnahyb") {
       ch_snps2 = bedtools_intersect_snps(ch_snps, bait_set_hyb2)
@@ -143,34 +135,31 @@ workflow {
     // plot BAF from genotyped SNPs
     plot_baf(concat_snps_per_cell.out, refcds)
 
-    // knit and merge BAF plots
-    knit_baf(plot_baf.out)
-    knit_baf.out
-      | map { meta, baf_plots, rmds  ->
-              return [meta.subMap(['donor_id']), baf_plots, rmds]
-      }
-      | groupTuple()
-      | map { meta, baf_plots, rmds ->
-              def flat_baf_plots = baf_plots.flatten()
-              return [meta, flat_baf_plots, rmds]
-      }
-      | set { merge_baf_input }
-    merge_baf(parent_rmd, merge_baf_input, "BAF plots", "genotyping/snps")
+    // merge BAF plots into PDF
+    merge_pdf_baf(
+      plot_baf.out
+        .map { meta, plots -> [meta.subMap(['donor_id']), plots] }
+        .groupTuple()
+        .map { meta, plots -> [meta, plots.flatten()] },
+      "baf_plots",
+      "genotyping/snps"
+    )
     
-    // generate report
-    if (params.knit_report) {
-      plot_baf.out \
-        .join(plot_vdj_cov.out) \
-        .join(MOSDEPTH.out.summary_txt) \
-        .join(MOSDEPTH.out.global_txt) \
-        .join(MOSDEPTH.out.regions_txt) \
-        | map { meta, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt ->
+    if (params.knit_qc_report) {
+      
+      qc_report_rmd = file("${baseDir}/bin/qc_report.Rmd", checkIfExists: true)
+      MOSDEPTH.out.summary_txt
+        | join(MOSDEPTH.out.global_txt)
+        | join(MOSDEPTH.out.regions_txt)
+        | map { meta, summary_txt, global_txt, regions_txt ->
                 [meta.subMap(['donor_id']),
-                  meta.id, baf_plots, vdj_plots, summary_txt, global_txt, regions_txt]
+                  meta.id, summary_txt, global_txt, regions_txt]
         }
         | groupTuple()
-        | set { report_input }
-      report(report_rmd, report_input)
+        | join(concat_snps.out)
+        | set { ch_qc_report_input }
+      knit_qc_report(qc_report_rmd, ch_qc_report_input, params.seq_type)
+    
     }
 
   }

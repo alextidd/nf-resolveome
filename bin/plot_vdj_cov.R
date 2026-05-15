@@ -50,6 +50,6 @@ purrr::walk2(names(dat), dat, function(chr_i, chr_dat) {
     theme_classic() +
     ggtitle(paste0(opts$id, " - chr", chr_i, " genes - mean coverage")) +
     scale_fill_brewer(palette = "Dark2")
-  ggsave(paste0(opts$id, "_chr", chr_i, "_mean_cov.png"),
+  ggsave(paste0(opts$id, "_chr", chr_i, "_mean_cov.pdf"),
          p, height = 5, width = 20)
 })
