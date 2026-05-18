@@ -47,13 +47,13 @@ mosdepth <-
 
 # load mean coverage
 metrics$cov <-
-    split(mosdepth$summary_txt, mosdepth$id) %>%
-    purrr::map(read_tsv) %>%
-    bind_rows(.id = "id") %>%
-    dplyr::rename(chr = chrom) %>%
-    filter(chr == "total" & params$seq_type == "dna" |
-           chr == "total_region" & params$seq_type == "dnahyb") %>%
-    transmute(id, name = "mean coverage", value = mean)
+  split(mosdepth$summary_txt, mosdepth$id) %>%
+  purrr::map(read_tsv) %>%
+  bind_rows(.id = "id") %>%
+  dplyr::rename(chr = chrom) %>%
+  filter(chr == "total" & params$seq_type == "dna" |
+          chr == "total_region" & params$seq_type == "dnahyb") %>%
+  transmute(id, name = "mean coverage", value = mean)
 
 # load coverage distribution
 dist <-
@@ -155,7 +155,7 @@ metrics %>%
 
 We plot all metrics.
 
-```{r plot_metrics, fig.width = 12, fig.height = 0.15 * n_ids}
+```{r plot_metrics, fig.width = 12, fig.height = max(5, 0.15 * n_ids)}
 blue_metrics <- c("mean coverage", "% covered")
 metrics %>%
   bind_rows() %>%
@@ -209,7 +209,7 @@ alexr::plot_vaf_dist(snps %>% filter(total_depth > 0),
 
 We plot the proportion of allelic dropout per cell.
 
-```{r plot_allelic_dropout, fig.height = 0.12 * n_ids}
+```{r plot_allelic_dropout, fig.height = max(5, 0.12 * n_ids)}
 allelic_statuses %>%
   left_join(
     allelic_statuses %>%
