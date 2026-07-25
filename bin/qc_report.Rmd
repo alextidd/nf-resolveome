@@ -13,7 +13,10 @@ output:
 params:
   donor_id: NULL
   ids: NULL
+  wells: NULL
+  plates: NULL
   seq_type: NULL
+  run_snps: NULL
 ---
 
 ```{r setup, include = F, message = F, warning = F, echo = F}
@@ -29,6 +32,15 @@ knitr::opts_chunk$set(warning = FALSE,
 
 # get n ids
 n_ids <- length(params$ids)
+
+# parse well coordinates (e.g. "A1", "B10") into row/column, per plate
+well_positions <-
+  tibble(id = params$ids, well = params$wells, plate = params$plates) %>%
+  mutate(row = str_extract(well, "^[A-Za-z]+") %>% str_to_upper(),
+         col = as.integer(str_extract(well, "[0-9]+$")),
+         row_num = match(row, LETTERS))
+
+n_plates <- length(unique(well_positions$plate))
 ```
 
 # Sequencing metrics
@@ -71,18 +83,18 @@ metrics$perc_cov <-
             value = 100 * prop)
 ```
 
-We load the genotyped SNPs.
+`r if (params$run_snps) "We load the genotyped SNPs."`
 
-```{r heterozygosity}
+```{r heterozygosity, eval = params$run_snps}
 # get genotyped snps
 snps <-
   read_tsv(paste0(params$donor_id, "_genotyped_snps.tsv"),
            col_types = cols(chr = col_character()))
 ```
 
-We calculate allelic dropout.
+`r if (params$run_snps) "We calculate allelic dropout."`
 
-```{r allelic_balance}
+```{r allelic_balance, eval = params$run_snps}
 # calculate allelic statuses
 allelic_statuses <-
   snps %>%
@@ -104,9 +116,9 @@ metrics$allelic_dropout <-
   summarise(name = "% allelic dropout", value = sum(prop) * 100)
 ```
 
-We calculate the beta binomial overdispersion of the VAF distribution.
+`r if (params$run_snps) "We calculate the beta binomial overdispersion of the VAF distribution."`
 
-```{r beta_binomial}
+```{r beta_binomial, eval = params$run_snps}
 fit_rho <- function(df) {
   tryCatch({
     # Log-likelihood for beta-binomial with fixed mu = 0.5
@@ -130,7 +142,7 @@ metrics$overdispersion <-
   transmute(id, name = "beta-binomial overdispersion", value = rho)
 ```
 
-## Summary of metrics
+## Summary of metrics
 
 We summarise all metrics.
 
@@ -149,7 +161,7 @@ metrics %>%
 metrics %>%
   bind_rows() %>%
   tidyr::pivot_wider() %>%
-  arrange(`mean coverage`) %>%
+  arrange(desc(`mean coverage`)) %>%
   knitr::kable(digits = 2, caption = "Metrics per cell.")
 ```
 
@@ -194,22 +206,56 @@ dist %>%
   theme(legend.position = "none")
 ```
 
-## Allelic balance
+## Metrics by well
 
-We plot the allelic balance of heterozygous SNPs.
+We plot each metric spatially by well, to check for spatial patterns across the plate.
 
-```{r plot_allelic_vaf_dist, fig.height = 5, fig.width = 7}
+```{r plot_metrics_by_well, fig.width = 3.5 * n_plates + 2, fig.height = 5}
+metrics_well <-
+  metrics %>%
+  bind_rows() %>%
+  left_join(well_positions, by = "id")
+
+well_plots <-
+  metrics_well %>%
+  distinct(name) %>%
+  pull(name) %>%
+  purrr::map(function(metric_name) {
+    metrics_well %>%
+      filter(name == metric_name) %>%
+      ggplot(aes(x = col, y = row_num, fill = value)) +
+      geom_tile(colour = "white") +
+      coord_equal() +
+      facet_wrap(~ plate) +
+      scale_fill_viridis_c() +
+      scale_x_continuous(breaks = 1:max(metrics_well$col, na.rm = TRUE),
+                         expand = c(0, 0)) +
+      scale_y_reverse(breaks = 1:max(metrics_well$row_num, na.rm = TRUE),
+                      labels = LETTERS[1:max(metrics_well$row_num, na.rm = TRUE)],
+                      expand = c(0, 0)) +
+      theme_classic() +
+      labs(title = metric_name, x = "column", y = "row", fill = metric_name)
+  })
+
+purrr::walk(well_plots, print)
+```
+
+`r if (params$run_snps) "## Allelic balance"`
+
+`r if (params$run_snps) "We plot the allelic balance of heterozygous SNPs."`
+
+```{r plot_allelic_vaf_dist, fig.height = 5, fig.width = 7, eval = params$run_snps}
 alexr::plot_vaf_dist(snps,
                      paste(params$donor_id, "heterozygous SNPs"))
 alexr::plot_vaf_dist(snps %>% filter(total_depth > 0),
                      paste(params$donor_id, "heterozygous SNPs (depth > 0)"))
 ```
 
-## Allelic dropout
+`r if (params$run_snps) "## Allelic dropout"`
 
-We plot the proportion of allelic dropout per cell.
+`r if (params$run_snps) "We plot the proportion of allelic dropout per cell."`
 
-```{r plot_allelic_dropout, fig.height = max(5, 0.12 * n_ids)}
+```{r plot_allelic_dropout, fig.height = max(5, 0.12 * n_ids), eval = params$run_snps}
 allelic_statuses %>%
   left_join(
     allelic_statuses %>%

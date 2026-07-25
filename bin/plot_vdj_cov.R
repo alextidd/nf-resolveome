@@ -8,26 +8,21 @@ library(dplyr)
 
 # options
 option_list <- list(make_option("--regions_bed", type = "character"),
-                    make_option("--bait_set_vdj", type = "character"),
+                    make_option("--vdj_bed", type = "character"),
                     make_option("--id", type = "character"))
 opts <- parse_args(OptionParser(option_list = option_list))
 print(opts)
 saveRDS(opts, "opts.rds")
 # opts <- readRDS("opts.rds")
 
-# load bait set
+# load bait set"
 ig_tcr_regions <-
-  readr::read_tsv(opts$bait_set_vdj,
-                  col_names = c("chr", "start", "end", "gene")) %>%
+  readr::read_tsv(opts$vdj_bed,
+                  col_names = c("chr", "start", "end", "gene", "type", "segment")) %>%
   mutate(
     chr = as.character(chr),
-    type = case_when(substr(gene, 1, 2) == "TR" ~ "TCR",
-                     substr(gene, 1, 2) == "IG" ~ "BCR",
-                     TRUE ~ NA_character_),
-    region = paste0(chr, "_", type),
-    segment = substr(gene, 4, 4),
-    segment = ifelse(segment %in% c("A", "E", "G", "M"), "C", segment) %>%
-      factor(levels = c("V", "D", "J", "C")))
+    region = paste0(type, "_", chr),
+    segment = factor(segment, levels = c("V", "D", "J", "C")))
 
 # make plots
 dat <-
@@ -48,8 +43,8 @@ purrr::walk2(names(dat), dat, function(chr_i, chr_dat) {
     scale_y_continuous(expand = c(0, 0)) +
     guides(x = guide_axis(angle = -90)) +
     theme_classic() +
-    ggtitle(paste0(opts$id, " - chr", chr_i, " genes - mean coverage")) +
+    ggtitle(paste0(opts$id, " - ", chr_i, " genes - mean coverage")) +
     scale_fill_brewer(palette = "Dark2")
-  ggsave(paste0(opts$id, "_chr", chr_i, "_mean_cov.pdf"),
+  ggsave(paste0(opts$id, "_", chr_i, "_mean_cov.pdf"),
          p, height = 5, width = 20)
 })

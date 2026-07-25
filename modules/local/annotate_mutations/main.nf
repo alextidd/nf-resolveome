@@ -8,6 +8,7 @@ process annotate_mutations {
   input:
   tuple val(meta), val(set), path(mutations)
   path(refcds)
+  val(no_chr_prefix)
 
   output:
   tuple val(meta), val(set), path("${meta.donor_id}_annotated_mutations.tsv")
@@ -17,6 +18,7 @@ process annotate_mutations {
   annotate_mutations.R \\
     --mutations ${mutations} \\
     --donor_id ${meta.donor_id} \\
-    --refcds ${refcds}
+    --refcds ${refcds} \\
+    --no_chr_prefix ${no_chr_prefix}
   """
 }

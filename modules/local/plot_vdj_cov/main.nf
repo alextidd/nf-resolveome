@@ -7,7 +7,7 @@ process plot_vdj_cov {
   
   input:
   tuple val(meta), path(regions_bed)
-  path(bait_set_vdj)
+  path(vdj_bed)
 
   output:
   tuple val(meta), path("${meta.id}_*_mean_cov.pdf")
@@ -16,7 +16,7 @@ process plot_vdj_cov {
   """
   plot_vdj_cov.R \\
     --regions_bed ${regions_bed} \\
-    --bait_set ${bait_set_vdj} \\
+    --vdj_bed ${vdj_bed} \\
     --id ${meta.id}
   """
 }

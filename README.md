@@ -48,7 +48,7 @@ chr     pos     ref     alt
 
 #### Bait set
 
-The `--bait_set_hyb` should be a bed file containing all targeted regions, like
+The `--dnahyb_bed` should be a bed file containing all targeted regions, like
 this:
 
 ```
@@ -63,7 +63,7 @@ this:
 
 #### VDJ regions
 
-The `--bait_set_vdj` should be a bed file with named regions whose coverage is
+The `--vdj_bed` should be a bed file with named regions whose coverage is
 of interest to discern VDJ recombination, like this:
 
 ```
@@ -86,8 +86,8 @@ Now, you can run the pipeline using, for example:
 ```bash
 nextflow run nf-resolveome \
     --samplesheet samplesheet.csv \
-    --bait_set_hyb data/immune_panel.bed \
-    --bait_set_vdj data/ig_tcr_genes.bed \
+    --dnahyb_bed data/immune_panel.bed \
+    --vdj_bed data/ig_tcr_genes.bed \
     --fasta /lustre/scratch124/casm/team78pipelines/canpipe/live/ref/Homo_sapiens/GRCh37d5/genome.fa \
     --location local \
     --baf_chrs 1,9
@@ -104,21 +104,21 @@ $ nextflow run nf-resolveome --help
 ### Input/output options
 
 - `--location`: Are the BAMs saved locally or on iRODs?  (accepted: irods, local) [default: local]
-- `--samplesheet`: Comma-separated file containing the columns 'id', 'donor_id', 'bam', 'mutations', and 'snps'. 
+- `--samplesheet`: Comma-separated file containing the columns 'id', 'donor_id', 'bam', 'mutations', and 'snps'. Also requires 'well' (e.g. 'A1', 'B10') and 'plate' columns if `--knit_qc_report` is set, to plot metrics spatially by well, faceted by plate. 
 - `--min_bq`: Minimum base quality for genotyping. [default: 30] 
 - `--min_mq`: Minimum mapping quality for genotyping. [default: 30] 
 - `--mask`: Mask for genotyping. [default: 3844] 
 - `--out_dir`: Output directory. [default: out/] 
 - `--annotate_mutations`: Annotate the genes and impacts of mutations using dndscv? 
-- `--bait_set_hyb`: A bed file of the bait set used for hybridisation. 
-- `--bait_set_vdj`: A bed file of the VDJ regions of interest. 
+- `--dnahyb_bed`: A bed file of the bait set used for hybridisation. 
+- `--vdj_bed`: A bed file of the VDJ regions of interest. 
 - `--baf_chrs`: Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3). 
 - `--knit_qc_report`: Knit the report? [default: false]
 
 ### Reference files
 
-- `--genome_build`: Genome build.  (accepted: GRCh37, GRCh38) [default: GRCh37] 
-- `--no_chr`: Is there a 'chr' prefix on the chromosome names? [default: false]
+- `--genome_build`: Genome build.  (accepted: GRCh37, GRCh38)
+- `--no_chr_prefix`: Is there a 'chr' prefix on the chromosome names? [default: false]
 - `--refcds`: Path to RefCDS Rda object from the dndscv package.
 - `--fasta`: Fasta file for the genome build. 
 

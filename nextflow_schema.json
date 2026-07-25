@@ -21,7 +21,6 @@
     },
     "genome_build": {
       "type": "string",
-      "default": "GRCh37",
       "enum": ["GRCh37", "GRCh38"],
       "description": "Genome build."
     },
@@ -45,7 +44,7 @@
       "default": "out/",
       "description": "Output directory."
     },
-    "no_chr": {
+    "no_chr_prefix": {
       "type": "boolean",
       "default": true,
       "description": "Are the contigs prefaced with 'chr' (chr1) or without (1)?"
@@ -59,11 +58,11 @@
       "default": "dna",
       "enum": ["dna", "dnahyb"]
     },
-    "bait_set_vdj": {
+    "vdj_bed": {
       "type": "string",
       "description": "A bed file of the VDJ regions of interest."
     },
-    "bait_set_hyb": {
+    "dnahyb_bed": {
       "type": "string",
       "description": "A bed file of the bait set used for hybridisation."
     },
@@ -77,7 +76,6 @@
     },
     "refcds": {
       "type": "string",
-      "default": "/nfs/casm/team268im/at31/reference/dndscv/refcds_hg19.rda",
       "description": "Path to RefCDS Rda object from the dndscv package."
     },
     "knit_qc_report": {
@@ -109,5 +107,5 @@
       "type": "string"
     }
   },
-  "required": ["samplesheet", "fasta"]
+  "required": ["samplesheet", "fasta", "genome_build"]
 }

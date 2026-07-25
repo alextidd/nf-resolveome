@@ -5,7 +5,7 @@ process bedtools_intersect_snps {
 
   input:
   tuple val(meta), val(set), path(snps)
-  path(bait_set_hyb)
+  path(dnahyb_bed)
 
   output:
   tuple val(meta), val(set), path("snps_intersected.tsv")
@@ -48,7 +48,7 @@ process bedtools_intersect_snps {
 
   head -1 snps.bed > snps_intersected.tsv.tmp
 
-  bedtools intersect -a <(sed 1d snps.bed) -b ${bait_set_hyb} -wa \\
+  bedtools intersect -a <(sed 1d snps.bed) -b ${dnahyb_bed} -wa \\
     >> snps_intersected.tsv.tmp
   
   cut -f1,3- snps_intersected.tsv.tmp > snps_intersected.tsv

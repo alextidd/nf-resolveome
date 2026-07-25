@@ -8,16 +8,19 @@ process knit_qc_report {
   
   input:
   path rmd
-  tuple val(meta), val(ids),
+  tuple val(meta), val(ids), val(wells), val(plates),
         path(summary_txt), path(global_txt), path(regions_txt),
-        val(set), path(geno)
+        val(run_snps), path(geno)
   val(seq_type)
 
   output:
   path "${meta.donor_id}_qc_report.html"
-  
+
   script:
   def c_ids = 'c("' + ids.join('", "') + '")'
+  def c_wells = 'c("' + wells.join('", "') + '")'
+  def c_plates = 'c("' + plates.join('", "') + '")'
+  def r_run_snps = run_snps ? 'TRUE' : 'FALSE'
   """
   #!/usr/bin/env Rscript
 
@@ -26,7 +29,10 @@ process knit_qc_report {
     list(
       donor_id = "${meta.donor_id}",
       ids = ${c_ids},
-      seq_type = "${seq_type}")
+      wells = ${c_wells},
+      plates = ${c_plates},
+      seq_type = "${seq_type}",
+      run_snps = ${r_run_snps})
   saveRDS(my_params, "params.rds")
 
   # render
