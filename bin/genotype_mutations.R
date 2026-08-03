@@ -18,12 +18,15 @@ saveRDS(opts, "opts.rds")
 # opts <- readRDS("opts.rds")
 
 # genotype mutations
-muts <- readr::read_tsv(opts$mutations)
-geno <- alexr::genotype_variants(variants = muts,
-                                 bam = opts$bam,
-                                 min_bq = opts$min_bq,
-                                 min_mq = opts$min_mq,
-                                 mask = opts$mask)
+muts <-
+  readr::read_tsv(opts$mutations) %>%
+  dplyr::select(chr, pos, ref, alt)
+geno <-
+  alexr::genotype_variants(variants = muts,
+                           bam = opts$bam,
+                           min_bq = opts$min_bq,
+                           min_mq = opts$min_mq,
+                           mask = opts$mask)
 
 # write alt calls to out
 geno %>%

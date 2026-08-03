@@ -33,9 +33,12 @@ if (geno %>% dplyr::filter(alt_vaf > 0) %>% nrow() == 0) {
   }
 
   # plot all chromosomes
-  p <- alexr::plot_baf(geno, "caveman_snps", genes = genes)
-  pdf(paste0(opts$id, "_caveman_snps_baf_plot.pdf"),
-      width = 5000 / 300, height = 1200 / 300)
+  p <-
+    alexr::plot_baf(p_dat = geno, p_title = opts$id,
+                    refcds = opts$refcds, genes = genes,
+                    p_alpha = 0.2, p_size = 0.5)
+  pdf(paste0(opts$id, "_snps_baf_plot.pdf"),
+      width = 16, height = 4)
   print(p)
   dev.off()
 
@@ -46,9 +49,9 @@ if (geno %>% dplyr::filter(alt_vaf > 0) %>% nrow() == 0) {
       p <-
         geno %>%
         dplyr::filter(chr == chr_i) %>%
-        alexr::plot_baf(genes = genes, p_alpha = 0.2, p_size = 0.8)
-      pdf(paste0(opts$id, "_caveman_snps_baf_chr", chr_i, "_plot.pdf"),
-          width = 5000 / 300, height = 1200 / 300)
+        alexr::plot_baf(p_title = paste(opts$id, "-", chr_i), genes = genes, refcds = opts$refcds, p_alpha = 0.2, p_size = 0.8)
+      pdf(paste0(opts$id, "_snps_baf_", chr_i, "_plot.pdf"),
+          width = 16, height = 4)
       print(p)
       dev.off()
     }

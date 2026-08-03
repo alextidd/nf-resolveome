@@ -3,7 +3,7 @@ process knit_qc_report {
   tag { "${meta.donor_id}" }
   queue "week"
   memory { 200.GB * task.attempt }
-  publishDir { "${params.out_dir}/${meta.donor_id}/" },
+  publishDir { "${params.out_dir}/${meta.donor_id}/qc/" },
     mode: "copy"
   
   input:
@@ -15,6 +15,7 @@ process knit_qc_report {
 
   output:
   path "${meta.donor_id}_qc_report.html"
+  path "${meta.donor_id}_metrics_per_cell.tsv"
 
   script:
   def c_ids = 'c("' + ids.join('", "') + '")'

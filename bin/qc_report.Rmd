@@ -158,10 +158,16 @@ metrics %>%
   knitr::kable(caption = "Summary of metrics.")
 
 # per cell
-metrics %>%
+metrics_per_cell <-
+  metrics %>%
   bind_rows() %>%
   tidyr::pivot_wider() %>%
-  arrange(desc(`mean coverage`)) %>%
+  arrange(desc(`mean coverage`))
+
+# save metrics per cell
+write_tsv(metrics_per_cell, paste0(params$donor_id, "_metrics_per_cell.tsv"))
+
+metrics_per_cell %>%
   knitr::kable(digits = 2, caption = "Metrics per cell.")
 ```
 
