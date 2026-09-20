@@ -17,6 +17,7 @@ include { generate_nr_nv       } from './modules/local/generate_nr_nv'
 include { plot_baf             } from './modules/local/plot_baf'
 include { merge_pdf as merge_pdf_vdj; merge_pdf as merge_pdf_baf } from './modules/local/merge_pdf'
 include { knit_qc_report       } from './modules/local/knit_qc_report'
+include { knit_genotyping_report } from './modules/local/knit_genotyping_report'
 include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
 
@@ -189,6 +190,35 @@ workflow {
                   [meta, ids, wells, plates, summary_txt, global_txt, regions_txt, false, []] }
     }
     knit_qc_report(qc_report_rmd, ch_qc_report_input, params.seq_type)
+
+  }
+
+  // knit genotyping report
+  // (requires the genotyped and annotated mutations)
+  if (params.knit_genotyping_report) {
+
+    if (!params.run_mutations) {
+      error "`--knit_genotyping_report` requires `--run_mutations`."
+    }
+
+    genotyping_report_rmd = file("${baseDir}/bin/genotyping_report.Rmd", checkIfExists: true)
+
+    // well, plate and cell type per id (only needed to label cells in the report)
+    channel
+      .fromPath(params.samplesheet)
+      .splitCsv(header: true)
+      | map { row -> [[donor_id: row.donor_id], row.id,
+                      row.well ?: "NA", row.plate ?: "NA", row.cell_type ?: "NA"] }
+      | groupTuple()
+      | set { ch_cells }
+
+    ch_genotyping_report_input =
+      ch_cells
+        | join(annotate_mutations.out
+                 | map { meta, set, geno -> [meta.subMap(['donor_id']), geno] })
+
+    knit_genotyping_report(genotyping_report_rmd, ch_genotyping_report_input,
+                           params.min_alt_vaf, params.min_alt_depth)
 
   }
 

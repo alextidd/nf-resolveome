@@ -1,0 +1,247 @@
+---
+title: "nf-resolveome genotyping report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    fig_width: 8
+    keep_md: true
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 4
+    theme: lumen
+params:
+  donor_id: NULL
+  ids: NULL
+  wells: NULL
+  plates: NULL
+  cell_types: NULL
+  min_alt_vaf: NULL
+  min_alt_depth: NULL
+---
+
+```{r setup, include = F, message = F, warning = F, echo = F}
+# libraries
+library(magrittr)
+library(tidyverse)
+library(ggplot2)
+library(pheatmap)
+
+# chunk options
+knitr::opts_chunk$set(warning = FALSE,
+                      dpi = 300,
+                      message = FALSE,
+                      fig.align = "center")
+
+# get n ids
+n_ids <- length(params$ids)
+
+# get cell annotations (missing columns are passed as "NA")
+cells <-
+  tibble(id = params$ids, well = params$wells, plate = params$plates,
+         cell_type = params$cell_types) %>%
+  mutate(across(c(well, plate, cell_type), ~ na_if(.x, "NA")))
+
+n_plates <- n_distinct(cells$plate)
+
+# label each cell by its cell type, plate (if more than one) and well
+cells <-
+  cells %>%
+  mutate(cell_label = purrr::pmap_chr(
+    list(cell_type, plate, well, id),
+    function(cell_type, plate, well, id) {
+      parts <- c(cell_type, if (n_plates > 1) plate, well)
+      parts <- parts[!is.na(parts)]
+      if (length(parts) == 0) id else paste(parts, collapse = " ")
+    }))
+
+# fall back to the id if the labels are not unique
+if (anyDuplicated(cells$cell_label) > 0) {
+  cells$cell_label <- cells$id
+}
+
+# can we annotate cells by their cell type?
+annotate_cell_type <- !all(is.na(cells$cell_type))
+
+# describe the filters
+filters <- paste0("alt VAF >= ", params$min_alt_vaf,
+                  ", alt depth >= ", params$min_alt_depth)
+```
+
+# Genotyped mutations
+
+We load the annotated mutations.
+
+```{r load_mutations}
+muts <-
+  read_tsv(paste0(params$donor_id, "_annotated_mutations.tsv"),
+           col_types = cols(chr = col_character())) %>%
+  alexr::type_variants() %>%
+  mutate(mut_id = paste(chr, pos, ref, alt, sep = "_")) %>%
+  left_join(cells, by = "id")
+```
+
+We filter to well-supported genotypes (`r filters`).
+
+```{r filter_mutations}
+geno <-
+  muts %>%
+  filter(alt_vaf >= params$min_alt_vaf, alt_depth >= params$min_alt_depth)
+```
+
+## Summary of genotyping
+
+We summarise the genotyping.
+
+```{r summarise_genotyping}
+tibble(name = c("cells genotyped",
+                "mutations genotyped",
+                "mutations passing filters",
+                "cells with >= 1 passing mutation"),
+       value = c(n_ids,
+                 n_distinct(muts$mut_id),
+                 n_distinct(geno$mut_id),
+                 n_distinct(geno$id))) %>%
+  knitr::kable(caption = paste0("Summary of genotyping (", filters, ")."))
+```
+
+We plot the number of passing mutations per cell.
+
+```{r plot_muts_per_cell, fig.width = 8, fig.height = max(5, 0.12 * n_ids)}
+muts_per_cell <-
+  cells %>%
+  left_join(geno %>% dplyr::count(id, name = "n_muts"), by = "id") %>%
+  mutate(n_muts = replace_na(n_muts, 0))
+
+p_muts_per_cell <-
+  muts_per_cell %>%
+  ggplot(aes(y = reorder(cell_label, n_muts), x = n_muts))
+
+if (annotate_cell_type) {
+  p_muts_per_cell <- p_muts_per_cell + geom_col(aes(fill = cell_type), colour = "darkgrey")
+} else {
+  p_muts_per_cell <- p_muts_per_cell + geom_col(fill = "steelblue", colour = "darkgrey")
+}
+
+p_muts_per_cell +
+  theme_classic() +
+  theme(axis.text.y = element_text(size = 6), legend.position = "bottom",
+        axis.title.y = element_blank()) +
+  labs(x = "number of mutations", fill = "cell type") +
+  scale_x_continuous(expand = c(0, 0))
+```
+
+## VAF heatmap
+
+We plot the VAFs of the passing mutations across cells.
+
+```{r prepare_heatmap}
+p_dat <-
+  geno %>%
+  filter(!is.na(gene)) %>%
+  mutate(mut_label = case_when(
+    aachange == "." & impact == "Essential_Splice" ~ paste(chr, pos, "splice"),
+    aachange == "." ~ paste(chr, pos, type),
+    TRUE ~ aachange)) %>%
+  mutate(mut_label = paste(gene, mut_label)) %>%
+  # disambiguate any mutations that share a label
+  group_by(mut_label) %>%
+  mutate(mut_label = if (n_distinct(mut_id) > 1) {
+    paste0(mut_label, " (", chr, ":", pos, ")")
+  } else {
+    mut_label
+  }) %>%
+  ungroup()
+
+if (nrow(p_dat) > 0) {
+
+  mat <-
+    p_dat %>%
+    pivot_wider(id_cols = mut_label, names_from = cell_label,
+                values_from = alt_vaf, values_fn = max) %>%
+    column_to_rownames("mut_label") %>%
+    as.matrix()
+
+  mat[is.na(mat)] <- 0
+
+  # annotate each cell (column) with its cell type
+  if (annotate_cell_type) {
+    annot_col <-
+      p_dat %>%
+      distinct(cell_label, cell_type) %>%
+      column_to_rownames("cell_label")
+    annot_colors <- list(
+      cell_type = setNames(
+        scales::hue_pal()(n_distinct(annot_col$cell_type)),
+        sort(unique(annot_col$cell_type))))
+  } else {
+    annot_col <- NA
+    annot_colors <- NA
+  }
+
+} else {
+  mat <- matrix(nrow = 0, ncol = 0)
+}
+
+# size the heatmap by its number of rows (mutations) and columns (cells),
+# allowing space for the labels and dendrograms
+hm_cell_size <- 0.14
+hm_width <- min(40, max(8, hm_cell_size * ncol(mat) + 3))
+hm_height <- min(40, max(6, hm_cell_size * nrow(mat) + 2))
+```
+
+```{r plot_heatmap, fig.width = hm_width, fig.height = hm_height}
+if (nrow(mat) > 0) {
+
+  pheatmap(
+    mat,
+    cluster_rows = nrow(mat) > 1,
+    cluster_cols = ncol(mat) > 1,
+    annotation_col = annot_col,
+    annotation_colors = annot_colors,
+    fontsize_row = 6, fontsize_col = 6,
+    main = paste0(params$donor_id, " genotyping, ", filters))
+
+} else {
+  knitr::asis_output("No mutations passed the filters.")
+}
+```
+
+## Mutations
+
+We tabulate all passing mutations.
+
+```{r display_mutations}
+geno_display <-
+  geno %>%
+  select(id, chr, pos, ref, alt, gene, alt_vaf, alt_depth, total_depth,
+         aachange, impact) %>%
+  arrange(-alt_vaf, -alt_depth)
+
+geno_display %>%
+  knitr::kable(digits = 2,
+               caption = paste0("All genotyped mutations (", filters, ")."))
+```
+
+We tabulate the cells carrying more than one mutation.
+
+```{r display_multi_mutation_cells}
+geno_display %>%
+  add_count(id) %>%
+  filter(n > 1) %>%
+  arrange(-n, id) %>%
+  knitr::kable(digits = 2,
+               caption = paste0("Cells with multiple mutations (", filters, ")."))
+```
+
+We tabulate the mutations shared across multiple cells.
+
+```{r display_shared_mutations}
+geno_display %>%
+  add_count(chr, pos, ref, alt) %>%
+  filter(n > 1) %>%
+  arrange(-n, chr, pos, ref, alt) %>%
+  knitr::kable(digits = 2,
+               caption = paste0("Mutations shared across multiple cells (",
+                                filters, ")."))
+```

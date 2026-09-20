@@ -104,7 +104,7 @@ $ nextflow run nf-resolveome --help
 ### Input/output options
 
 - `--location`: Are the BAMs saved locally or on iRODs?  (accepted: irods, local) [default: local]
-- `--samplesheet`: Comma-separated file containing the columns 'id', 'donor_id', 'bam', 'mutations', and 'snps'. Also requires 'well' (e.g. 'A1', 'B10') and 'plate' columns if `--knit_qc_report` is set, to plot metrics spatially by well, faceted by plate. 
+- `--samplesheet`: Comma-separated file containing the columns 'id', 'donor_id', 'bam', 'mutations', and 'snps'. Also requires 'well' (e.g. 'A1', 'B10') and 'plate' columns if `--knit_qc_report` is set, to plot metrics spatially by well, faceted by plate. If `--knit_genotyping_report` is set, the optional 'well', 'plate' and 'cell_type' columns are used to label the cells in the report. 
 - `--min_bq`: Minimum base quality for genotyping. [default: 30] 
 - `--min_mq`: Minimum mapping quality for genotyping. [default: 30] 
 - `--mask`: Mask for genotyping. [default: 3844] 
@@ -114,6 +114,9 @@ $ nextflow run nf-resolveome --help
 - `--vdj_bed`: A bed file of the VDJ regions of interest. 
 - `--baf_chrs`: Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3). 
 - `--knit_qc_report`: Knit the report? [default: false]
+- `--knit_genotyping_report`: Knit the genotyping report? Requires `--run_mutations`. [default: false]
+- `--min_alt_vaf`: Minimum alt VAF for a mutation to be reported in the genotyping report. [default: 0.2]
+- `--min_alt_depth`: Minimum alt depth for a mutation to be reported in the genotyping report. [default: 3]
 
 ### Reference files
 

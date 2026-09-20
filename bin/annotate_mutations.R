@@ -18,8 +18,7 @@ saveRDS(opts, "opts.rds")
 mutations <-
   readr::read_tsv(opts$mutations) %>%
   dplyr::mutate(donor_id = opts$donor_id,
-                chr = dplyr::case_when(!opts$no_chr_prefix ~ gsub("^chr", "", chr),
-                                TRUE ~ chr))
+                chr = if (!opts$no_chr_prefix) gsub("^chr", "", chr) else chr)
 
 # annotate mutations with dndscv
 annot_mutations <- alexr::annotate_variants(mutations, refcds = opts$refcds)

@@ -83,6 +83,21 @@
       "default": false,
       "description": "Knit the report?"
     },
+    "knit_genotyping_report": {
+      "type": "boolean",
+      "default": false,
+      "description": "Knit the genotyping report?"
+    },
+    "min_alt_vaf": {
+      "type": "number",
+      "default": 0.2,
+      "description": "Minimum alt VAF for a mutation to be reported in the genotyping report."
+    },
+    "min_alt_depth": {
+      "type": "integer",
+      "default": 3,
+      "description": "Minimum alt depth for a mutation to be reported in the genotyping report."
+    },
     "run_snps": {
       "type": "boolean",
       "default": false,

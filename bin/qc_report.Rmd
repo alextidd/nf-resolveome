@@ -1,5 +1,5 @@
 ---
-title: "nf-resolveome report"
+title: "nf-resolveome QC report"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -85,7 +85,7 @@ metrics$perc_cov <-
 
 `r if (params$run_snps) "We load the genotyped SNPs."`
 
-```{r heterozygosity, eval = params$run_snps}
+```{r heterozygosity, eval = params$run_snps, include = params$run_snps}
 # get genotyped snps
 snps <-
   read_tsv(paste0(params$donor_id, "_genotyped_snps.tsv"),
@@ -94,7 +94,7 @@ snps <-
 
 `r if (params$run_snps) "We calculate allelic dropout."`
 
-```{r allelic_balance, eval = params$run_snps}
+```{r allelic_balance, eval = params$run_snps, include = params$run_snps}
 # calculate allelic statuses
 allelic_statuses <-
   snps %>%
@@ -118,7 +118,7 @@ metrics$allelic_dropout <-
 
 `r if (params$run_snps) "We calculate the beta binomial overdispersion of the VAF distribution."`
 
-```{r beta_binomial, eval = params$run_snps}
+```{r beta_binomial, eval = params$run_snps, include = params$run_snps}
 fit_rho <- function(df) {
   tryCatch({
     # Log-likelihood for beta-binomial with fixed mu = 0.5
@@ -250,7 +250,7 @@ purrr::walk(well_plots, print)
 
 `r if (params$run_snps) "We plot the allelic balance of heterozygous SNPs."`
 
-```{r plot_allelic_vaf_dist, fig.height = 5, fig.width = 7, eval = params$run_snps}
+```{r plot_allelic_vaf_dist, fig.height = 5, fig.width = 7, eval = params$run_snps, include = params$run_snps}
 alexr::plot_vaf_dist(snps,
                      paste(params$donor_id, "heterozygous SNPs"))
 alexr::plot_vaf_dist(snps %>% filter(total_depth > 0),
@@ -261,7 +261,7 @@ alexr::plot_vaf_dist(snps %>% filter(total_depth > 0),
 
 `r if (params$run_snps) "We plot the proportion of allelic dropout per cell."`
 
-```{r plot_allelic_dropout, fig.height = max(5, 0.12 * n_ids), eval = params$run_snps}
+```{r plot_allelic_dropout, fig.height = max(5, 0.12 * n_ids), eval = params$run_snps, include = params$run_snps}
 allelic_statuses %>%
   left_join(
     allelic_statuses %>%
