@@ -109,11 +109,13 @@ allelic_statuses <-
          allelic_status = factor(allelic_status, levels = c("both", "one", "neither")))
 
 # get prop allelic dropout
+# (sum over the categories, rather than filtering to them, so that cells with
+# no dropout at all are kept, with a value of 0)
 metrics$allelic_dropout <-
   allelic_statuses %>%
-  filter(allelic_status %in% c("one", "neither")) %>%
   group_by(id) %>%
-  summarise(name = "% allelic dropout", value = sum(prop) * 100)
+  summarise(name = "% allelic dropout",
+            value = 100 * sum(prop[allelic_status %in% c("one", "neither")]))
 ```
 
 `r if (params$run_snps) "We calculate the beta binomial overdispersion of the VAF distribution."`
