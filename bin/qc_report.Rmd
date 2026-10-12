@@ -214,6 +214,21 @@ dist %>%
   theme(legend.position = "none")
 ```
 
+## Depth vs breadth
+
+We plot the breadth of coverage against the depth of coverage, one point per
+cell. The breadth is only resolved to 1%, hence the banding.
+
+```{r plot_depth_vs_breadth, fig.height = 5, fig.width = 7}
+metrics$cov %>%
+  transmute(id, cov = value) %>%
+  left_join(metrics$perc_cov %>% transmute(id, perc_cov = value), by = "id") %>%
+  ggplot(aes(x = cov, y = perc_cov)) +
+  geom_point(colour = "steelblue", alpha = 0.6) +
+  theme_classic() +
+  labs(x = "mean coverage", y = "% covered")
+```
+
 ## Metrics by well
 
 We plot each metric spatially by well, to check for spatial patterns across the plate.

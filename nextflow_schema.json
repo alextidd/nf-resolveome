@@ -62,6 +62,20 @@
       "type": "string",
       "description": "A bed file of the VDJ regions of interest."
     },
+    "ig_bed": {
+      "type": "string",
+      "description": "A bed file of named IG regions (CSR, IGKC, IGLC1-7) whose coverage calls class switch recombination and light chain usage. If unset, the IG coverage step is skipped."
+    },
+    "csr_max_norm_cov": {
+      "type": "number",
+      "default": 0.02,
+      "description": "Coverage of the CSR region below this fraction of the cell's overall mean coverage is called as class switch recombination."
+    },
+    "light_chain_max_norm_cov": {
+      "type": "number",
+      "default": 0.02,
+      "description": "Coverage of IGKC below this fraction of the cell's overall mean coverage is called as deletion of the IGK locus, i.e. an IGL-using cell."
+    },
     "dnahyb_bed": {
       "type": "string",
       "description": "A bed file of the bait set used for hybridisation."

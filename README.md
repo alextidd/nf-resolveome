@@ -10,9 +10,10 @@ VDJ, and LOH analyses for the ResolveDNA/ResolveOME protocol.
 3. Run MOSDEPTH to calculate genome-wide coverage.
 4. Run MOSDEPTH to calculate coverage of the bait set.
 5. Run MOSDEPTH to calculate and plot coverage of the the VDJ regions.
-6. Genotype and optionally annotate mutations.
-7. Genotype SNPs and generate BAF plots.
-8. Optionally, knit the report.
+6. Optionally, run MOSDEPTH over the IG regions to call class switch recombination and light chain usage.
+7. Genotype and optionally annotate mutations.
+8. Genotype SNPs and generate BAF plots.
+9. Optionally, knit the report.
 
 ## Usage
 
@@ -79,6 +80,31 @@ of interest to discern VDJ recombination, like this:
 2       89214597        89214894        IGKV7-3
 ```
 
+#### IG regions
+
+The `--ig_bed` should be a bed file of named regions whose coverage reports
+immunoglobulin locus rearrangement, like this:
+
+```
+chr14   105836764       105856218       CSR
+chr2    88857160        88857683        IGKC
+chr22   22895374        22895834        IGLC1
+chr22   22900975        22901437        IGLC2
+```
+
+The region names are what the pipeline keys on: `CSR` (the IGHD-IGHM span,
+which contains Smu, and is deleted when a B cell class switches), `IGKC`
+(deleted by the kappa-deleting element in IGL-using cells) and `IGLC1` to
+`IGLC7` (the light chain control). Coverage of each is normalised to the
+overall mean coverage of the cell, and a region falling below the relevant
+threshold is called as deleted. Both calls detect *biallelic* deletion only: a
+cell that has rearranged one allele retains about half coverage and is called
+`FALSE`. Regions outside the hyb panel are dropped from the bed and reported as
+`NA` rather than as deleted.
+
+Note that coverage here excludes duplicates, so the values are not on the same
+scale as Picard `CollectHsMetrics` `MEAN_BAIT_COVERAGE`, which counts them.
+
 ### Run
 
 Now, you can run the pipeline using, for example:
@@ -112,6 +138,9 @@ $ nextflow run nf-resolveome --help
 - `--annotate_mutations`: Annotate the genes and impacts of mutations using dndscv? 
 - `--dnahyb_bed`: A bed file of the bait set used for hybridisation. 
 - `--vdj_bed`: A bed file of the VDJ regions of interest. 
+- `--ig_bed`: A bed file of named IG regions (CSR, IGKC, IGLC1-7) whose coverage calls class switch recombination and light chain usage. If unset, the IG coverage step is skipped. 
+- `--csr_max_norm_cov`: Coverage of the CSR region below this fraction of the cell's overall mean coverage is called as class switch recombination. [default: 0.02]
+- `--light_chain_max_norm_cov`: Coverage of IGKC below this fraction of the cell's overall mean coverage is called as deletion of the IGK locus, i.e. an IGL-using cell. [default: 0.02]
 - `--baf_chrs`: Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3). 
 - `--knit_qc_report`: Knit the report? [default: false]
 - `--knit_genotyping_report`: Knit the genotyping report? Requires `--run_mutations`. [default: false]
@@ -134,41 +163,40 @@ BAM, the mutations files, the SNPs files, and the reference files.
 
 ## Output
 
-An example of an output directory, for the sample `plate3_wellA12_dna_run49882`
-in patient `PD63118`:
+An example of an output directory, for one cell of patient `PD64513`:
 
 ```
 .
-└── PD63118
+└── PD64513
+    ├── cells
+    │   └── PD64513_plate003_wellA10_CD4.Naive_dnahyb
+    │       ├── genotyping
+    │       │   └── snps
+    │       │       └── ..._snps_baf_plot.pdf
+    │       ├── mosdepth
+    │       │   ├── ....mosdepth.global.dist.txt
+    │       │   ├── ....mosdepth.region.dist.txt
+    │       │   ├── ....mosdepth.summary.txt
+    │       │   ├── ....regions.bed.gz
+    │       │   └── ....regions.bed.gz.csi
+    │       └── vdj
+    │           ├── ....regions.bed.gz          # VDJ regions
+    │           ├── ....ig.regions.bed.gz       # IG regions
+    │           └── ..._BCR_chr14_mean_cov.pdf
     ├── genotyping
     │   ├── mutations
-    │   │   ├── PD63118_annotated_mutations.tsv
-    │   │   └── PD63118_genotyped_mutations.tsv
+    │   │   ├── PD64513_annotated_mutations.tsv
+    │   │   ├── PD64513_genotyped_mutations.tsv
+    │   │   └── PD64513_genotyping_report.html
     │   └── snps
-    │       └── PD63118_genotyped_snps.tsv
-    └── plate3_wellA12_dna_run49882
-        ├── genotyping
-        │   └── snps
-        │       ├── plate3_wellA12_dna_run49882_caveman_snps_baf_chr1_plot.png
-        │       ├── plate3_wellA12_dna_run49882_caveman_snps_baf_chr9_plot.png
-        │       ├── plate3_wellA12_dna_run49882_caveman_snps_baf_plot.png
-        │       └── plate3_wellA12_dna_run49882_genotyped_snps.tsv
-        ├── mosdepth
-        │   ├── plate3_wellA12_dna_run49882_gene_cov.tsv
-        │   ├── plate3_wellA12_dna_run49882.mosdepth.global.dist.txt
-        │   ├── plate3_wellA12_dna_run49882.mosdepth.region.dist.txt
-        │   ├── plate3_wellA12_dna_run49882.mosdepth.summary.txt
-        │   ├── plate3_wellA12_dna_run49882.per-base.bed.gz
-        │   ├── plate3_wellA12_dna_run49882.per-base.bed.gz.csi
-        │   ├── plate3_wellA12_dna_run49882.regions.bed.gz
-        │   ├── plate3_wellA12_dna_run49882.regions.bed.gz.csi
-        │   └── versions.yml
-        └── vdj_cov
-            ├── plate3_wellA12_dna_run49882_chr14_BCR_mean_cov.png
-            ├── plate3_wellA12_dna_run49882_chr14_TCR_mean_cov.png
-            ├── plate3_wellA12_dna_run49882_chr22_BCR_mean_cov.png
-            ├── plate3_wellA12_dna_run49882_chr2_BCR_mean_cov.png
-            └── plate3_wellA12_dna_run49882_chr7_TCR_mean_cov.png
+    │       ├── PD64513_baf_plots.pdf
+    │       └── PD64513_genotyped_snps.tsv
+    ├── qc
+    │   ├── PD64513_metrics_per_cell.tsv
+    │   └── PD64513_qc_report.html
+    └── vdj
+        ├── PD64513_ig_cov.tsv
+        └── PD64513_vdj_coverage_plots.pdf
 ```
 
 ## License

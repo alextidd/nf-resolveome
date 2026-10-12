@@ -9,7 +9,7 @@ include { samtools_index       } from './modules/local/samtools_index'
 include { concat_gene_cov      } from './modules/local/concat_gene_cov'
 include { annotate_mutations   } from './modules/local/annotate_mutations'
 include { bedtools_intersect_snps } from './modules/local/bedtools_intersect_snps'
-include { bedtools_intersect_vdj_bed } from './modules/local/bedtools_intersect_vdj_bed'
+include { bedtools_intersect_vdj_bed; bedtools_intersect_vdj_bed as bedtools_intersect_ig_bed } from './modules/local/bedtools_intersect_vdj_bed'
 include { genotype_mutations; genotype_mutations as genotype_snps } from './modules/local/genotype_mutations'
 include { concat_mutations; concat_mutations as concat_snps } from './modules/local/concat_mutations'
 include { concat_snps_per_cell } from './modules/local/concat_snps_per_cell'
@@ -18,8 +18,9 @@ include { plot_baf             } from './modules/local/plot_baf'
 include { merge_pdf as merge_pdf_vdj; merge_pdf as merge_pdf_baf } from './modules/local/merge_pdf'
 include { knit_qc_report       } from './modules/local/knit_qc_report'
 include { knit_genotyping_report } from './modules/local/knit_genotyping_report'
-include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ } from './modules/nf-core/mosdepth/main'
+include { MOSDEPTH; MOSDEPTH as MOSDEPTH_VDJ; MOSDEPTH as MOSDEPTH_IG } from './modules/nf-core/mosdepth/main'
 include { plot_vdj_cov         } from './modules/local/plot_vdj_cov'
+include { summarise_ig_cov     } from './modules/local/summarise_ig_cov'
 
 workflow {
 
@@ -85,7 +86,7 @@ workflow {
   // if seq_type = dnahyb, restrict the VDJ bed to regions captured by the hyb panel
   vdj_bed = channel.fromPath(params.vdj_bed, checkIfExists: true)
   if (params.seq_type == "dnahyb") {
-    vdj_bed = bedtools_intersect_vdj_bed(vdj_bed, dnahyb_bed2)
+    vdj_bed = bedtools_intersect_vdj_bed(vdj_bed, dnahyb_bed2, "vdj")
   }
   vdj_bed = vdj_bed.first()
   MOSDEPTH_VDJ(samtools_index.out.combine(vdj_bed), fasta)
@@ -100,8 +101,35 @@ workflow {
       .groupTuple()
       .map { meta, plots -> [meta, plots.flatten()] },
     "vdj_coverage_plots",
-    "vdj_cov"
+    "vdj"
   )
+
+  // get coverage of the IG regions, to call class switch recombination and
+  // light chain usage
+  if (params.ig_bed) {
+
+    // if seq_type = dnahyb, restrict the IG bed to regions captured by the
+    // hyb panel (regions with no baits are dropped, and so are reported as NA
+    // rather than as deleted)
+    ig_bed = channel.fromPath(params.ig_bed, checkIfExists: true)
+    if (params.seq_type == "dnahyb") {
+      ig_bed = bedtools_intersect_ig_bed(ig_bed, dnahyb_bed2, "ig")
+    }
+    ig_bed = ig_bed.first()
+    MOSDEPTH_IG(samtools_index.out.combine(ig_bed), fasta)
+
+    // per donor, pair the IG coverage with the overall coverage of each cell
+    MOSDEPTH_IG.out.regions_bed
+      | join(MOSDEPTH.out.summary_txt)
+      | map { meta, regions_bed, summary_txt ->
+              [meta.subMap(['donor_id']), meta.id, regions_bed, summary_txt] }
+      | groupTuple()
+      | set { ch_ig_cov }
+
+    summarise_ig_cov(ch_ig_cov, params.seq_type,
+                     params.csr_max_norm_cov, params.light_chain_max_norm_cov)
+
+  }
 
   // genotype mutations
   if (params.run_mutations) {
