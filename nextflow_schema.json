@@ -19,11 +19,6 @@
       "type": "string",
       "description": "Fasta file for the genome build."
     },
-    "genome_build": {
-      "type": "string",
-      "enum": ["GRCh37", "GRCh38"],
-      "description": "Genome build."
-    },
     "min_bq": {
       "type": "integer",
       "default": 30,
@@ -46,12 +41,8 @@
     },
     "no_chr_prefix": {
       "type": "boolean",
-      "default": true,
+      "default": false,
       "description": "Are the contigs prefaced with 'chr' (chr1) or without (1)?"
-    },
-    "annotate_mutations": {
-      "type": "boolean",
-      "description": "Annotate the genes and impacts of mutations using dndscv?"
     },
     "seq_type": {
       "type": "string",
@@ -125,16 +116,10 @@
     "publish_dir_mode": {
       "type": "string",
       "default": "copy"
-    },
-    "max_memory": {
-      "type": "string"
-    },
-    "max_cpus": {
-      "type": "string"
-    },
-    "max_time": {
-      "type": "string"
     }
   },
-  "required": ["samplesheet", "fasta", "genome_build"]
+  "required": [
+    "samplesheet",
+    "fasta"
+  ]
 }

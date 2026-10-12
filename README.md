@@ -135,7 +135,6 @@ $ nextflow run nf-resolveome --help
 - `--min_mq`: Minimum mapping quality for genotyping. [default: 30] 
 - `--mask`: Mask for genotyping. [default: 3844] 
 - `--out_dir`: Output directory. [default: out/] 
-- `--annotate_mutations`: Annotate the genes and impacts of mutations using dndscv? 
 - `--dnahyb_bed`: A bed file of the bait set used for hybridisation. 
 - `--vdj_bed`: A bed file of the VDJ regions of interest. 
 - `--ig_bed`: A bed file of named IG regions (CSR, IGKC, IGLC1-7) whose coverage calls class switch recombination and light chain usage. If unset, the IG coverage step is skipped. 
@@ -149,7 +148,6 @@ $ nextflow run nf-resolveome --help
 
 ### Reference files
 
-- `--genome_build`: Genome build.  (accepted: GRCh37, GRCh38)
 - `--no_chr_prefix`: Is there a 'chr' prefix on the chromosome names? [default: false]
 - `--refcds`: Path to RefCDS Rda object from the dndscv package.
 - `--fasta`: Fasta file for the genome build. 
