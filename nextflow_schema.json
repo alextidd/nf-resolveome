@@ -47,7 +47,8 @@
     "seq_type": {
       "type": "string",
       "default": "dna",
-      "enum": ["dna", "dnahyb"]
+      "enum": ["dna", "dnahyb"],
+      "description": "Whether the cells are whole-genome (dna) or hybrid-capture (dnahyb) sequenced. Case-insensitive, so e.g. DNA and DNAHyb are also accepted."
     },
     "vdj_bed": {
       "type": "string",
@@ -78,6 +79,16 @@
     "baf_genes": {
       "type": "string",
       "description": "Any genes of interest to mark when making the BAF plots, delimited with a comma (e.g. BRCA1,BRCA2)."
+    },
+    "baf_min_depth": {
+      "type": "integer",
+      "default": 20,
+      "description": "Minimum depth for a SNP to be included in the BAF plots."
+    },
+    "baf_raster_dpi": {
+      "type": "integer",
+      "default": 200,
+      "description": "Resolution at which the points of the BAF plots are rasterised. Higher values give crisper plots but larger PDFs."
     },
     "refcds": {
       "type": "string",

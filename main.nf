@@ -22,6 +22,13 @@ include { summarise_ig_cov     } from './modules/local/summarise_ig_cov'
 
 workflow {
 
+  // normalise the sequencing type, so that e.g. DNAHyb, dnahyb and DNAHYB are
+  // all accepted. use seq_type, not params.seq_type, from here on
+  seq_type = (params.seq_type ?: "").toLowerCase()
+  if (!(seq_type in ["dna", "dnahyb"])) {
+    error "Unrecognised --seq_type '${params.seq_type}', expected dna or dnahyb"
+  }
+
   // get input bams
   channel
     .fromPath(params.samplesheet)
@@ -83,7 +90,7 @@ workflow {
   // get VDJ coverage
   // if seq_type = dnahyb, restrict the VDJ bed to regions captured by the hyb panel
   vdj_bed = channel.fromPath(params.vdj_bed, checkIfExists: true)
-  if (params.seq_type == "dnahyb") {
+  if (seq_type == "dnahyb") {
     vdj_bed = bedtools_intersect_vdj_bed(vdj_bed, dnahyb_bed2, "vdj")
   }
   vdj_bed = vdj_bed.first()
@@ -110,7 +117,7 @@ workflow {
     // hyb panel (regions with no baits are dropped, and so are reported as NA
     // rather than as deleted)
     ig_bed = channel.fromPath(params.ig_bed, checkIfExists: true)
-    if (params.seq_type == "dnahyb") {
+    if (seq_type == "dnahyb") {
       ig_bed = bedtools_intersect_ig_bed(ig_bed, dnahyb_bed2, "ig")
     }
     ig_bed = ig_bed.first()
@@ -124,7 +131,7 @@ workflow {
       | groupTuple()
       | set { ch_ig_cov }
 
-    summarise_ig_cov(ch_ig_cov, params.seq_type,
+    summarise_ig_cov(ch_ig_cov, seq_type,
                      params.csr_max_norm_cov, params.light_chain_max_norm_cov)
 
   }
@@ -144,7 +151,7 @@ workflow {
   if (params.run_snps) {
 
     // if seq_type = dnahyb, subset SNPs to those in the panel
-    if (params.seq_type == "dnahyb") {
+    if (seq_type == "dnahyb") {
       ch_snps2 = bedtools_intersect_snps(ch_snps, dnahyb_bed2)
     } else {
       ch_snps2 = ch_snps
@@ -215,7 +222,7 @@ workflow {
           | map { meta, ids, wells, plates, summary_txt, global_txt, regions_txt ->
                   [meta, ids, wells, plates, summary_txt, global_txt, regions_txt, false, []] }
     }
-    knit_qc_report(qc_report_rmd, ch_qc_report_input, params.seq_type)
+    knit_qc_report(qc_report_rmd, ch_qc_report_input, seq_type)
 
   }
 

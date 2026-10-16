@@ -2,7 +2,11 @@
 process knit_qc_report {
   tag { "${meta.donor_id}" }
   queue "week"
-  memory { 200.GB * task.attempt }
+  // dna loads whole-genome per-cell depth/SNP data (~27GB input, ~81GB
+  // observed usage on PD66328); dnahyb is panel-restricted (~271MB input,
+  // ~0.6GB observed usage) - scale the base by seq_type rather than one
+  // flat value sized for whichever seq_type was tested last.
+  memory { (seq_type.toLowerCase() == 'dna' ? 100.GB : 8.GB) * task.attempt }
   publishDir { "${params.out_dir}/${meta.donor_id}/qc/" },
     mode: "copy"
   
@@ -32,7 +36,7 @@ process knit_qc_report {
       ids = ${c_ids},
       wells = ${c_wells},
       plates = ${c_plates},
-      seq_type = "${seq_type}",
+      seq_type = "${seq_type.toLowerCase()}",
       run_snps = ${r_run_snps})
   saveRDS(my_params, "params.rds")
 

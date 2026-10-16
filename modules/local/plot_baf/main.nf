@@ -21,6 +21,8 @@ process plot_baf {
     --geno ${geno} \\
     --id ${meta.id} \\
     --refcds ${refcds} \\
+    --min_depth ${params.baf_min_depth} \\
+    --raster_dpi ${params.baf_raster_dpi} \\
     ${arg_baf_chrs} \\
     ${arg_baf_genes}
   """

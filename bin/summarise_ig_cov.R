@@ -12,6 +12,8 @@ option_list <- list(make_option("--ids", type = "character"),
                     make_option("--csr_max_norm_cov", type = "double"),
                     make_option("--light_chain_max_norm_cov", type = "double"))
 opts <- parse_args(OptionParser(option_list = option_list))
+# accept any casing of seq_type (dna / DNA, dnahyb / DNAHyb)
+opts$seq_type <- tolower(opts$seq_type)
 print(opts)
 saveRDS(opts, "opts.rds")
 # opts <- readRDS("opts.rds")

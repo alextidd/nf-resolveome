@@ -30,6 +30,9 @@ knitr::opts_chunk$set(warning = FALSE,
                       dpi = 300,
                       message = FALSE)
 
+# accept any casing of seq_type (dna / DNA, dnahyb / DNAHyb)
+seq_type <- tolower(params$seq_type)
+
 # get n ids
 n_ids <- length(params$ids)
 
@@ -55,7 +58,7 @@ metrics <- list()
 mosdepth <-
   tibble(id = params$ids) %>%
   mutate(summary_txt = paste0(id, ".mosdepth.summary.txt"),
-         dist = paste0(id, ".mosdepth.", ifelse(params$seq_type == "dna", "global", "region"), ".dist.txt"))
+         dist = paste0(id, ".mosdepth.", ifelse(seq_type == "dna", "global", "region"), ".dist.txt"))
 
 # load mean coverage
 metrics$cov <-
@@ -63,8 +66,8 @@ metrics$cov <-
   purrr::map(read_tsv) %>%
   bind_rows(.id = "id") %>%
   dplyr::rename(chr = chrom) %>%
-  filter(chr == "total" & params$seq_type == "dna" |
-          chr == "total_region" & params$seq_type == "dnahyb") %>%
+  filter(chr == "total" & seq_type == "dna" |
+          chr == "total_region" & seq_type == "dnahyb") %>%
   transmute(id, name = "mean coverage", value = mean)
 
 # load coverage distribution

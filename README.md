@@ -141,6 +141,8 @@ $ nextflow run nf-resolveome --help
 - `--csr_max_norm_cov`: Coverage of the CSR region below this fraction of the cell's overall mean coverage is called as class switch recombination. [default: 0.02]
 - `--light_chain_max_norm_cov`: Coverage of IGKC below this fraction of the cell's overall mean coverage is called as deletion of the IGK locus, i.e. an IGL-using cell. [default: 0.02]
 - `--baf_chrs`: Any chromosomes of interest to zoom in on when making the BAF plots, for higher breakpoint resolution, delimited with a comma (e.g. 1,2,3). 
+- `--baf_min_depth`: Minimum depth for a SNP to be included in the BAF plots. [default: 20]
+- `--baf_raster_dpi`: Resolution at which the points of the BAF plots are rasterised. Higher values give crisper plots but larger PDFs. [default: 200]
 - `--knit_qc_report`: Knit the report? [default: false]
 - `--knit_genotyping_report`: Knit the genotyping report? Requires `--run_mutations`. [default: false]
 - `--min_alt_vaf`: Minimum alt VAF for a mutation to be reported in the genotyping report. [default: 0.2]
